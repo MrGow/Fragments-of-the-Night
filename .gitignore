@@ -1,0 +1,15 @@
+# GameMaker Studio 2 / 2024+
+*.yyc
+*.yyp-snap
+*.temp
+*.log
+*.suo
+*.user
+*.db
+*.dll
+.idea/
+.vscode/
+cache/
+build/
+.DS_Store
+Thumbs.db
