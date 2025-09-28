@@ -189,8 +189,8 @@
   ],
   "name":"Room1",
   "parent":{
-    "name":"Fragments of the Night",
-    "path":"Fragments of the Night.yyp",
+    "name":"Rooms",
+    "path":"folders/Rooms.yy",
   },
   "parentRoom":null,
   "physicsSettings":{
