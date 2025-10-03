@@ -1,42 +1,55 @@
-//Get inputs (1 = pressed, 0 = not pressed)
-key_right = keyboard_check(vk_right);
-key_left = keyboard_check(vk_left);
-key_jump = keyboard_check(vk_space);
+// 1 = right key, -1 = left key, 0 = no input
+var move = keyboard_check(vk_right) - keyboard_check(vk_left);
 
-//Work out where to move horizontally
-hsp = (key_right - key_left) * hsp_walk;
 
-//Work out where to move vertically
-vsp = vsp + grv;
+// o_player: Step Event
 
-//Work out if we should jump
-if (place_meeting(x,y+1,oWall)) and (key_jump)
-{
-    vsp = vsp_jump; 
+// --- Movement ---
+hsp = (keyboard_check(vk_right) - keyboard_check(vk_left)) * move_speed;
+
+// Jump
+if (keyboard_check_pressed(vk_space) && place_meeting(x, y+1, o_solid)) {
+    vsp = jump_speed;
 }
 
-//Check for horizontal collisions and then move if we can
-var onepixel = sign(hsp) //moving left or right? right = 1, left = -1.
-if (place_meeting(x+hsp,y,oWall))
-{
-    //move as close as we can
-    while (!place_meeting(x+onepixel,y,oWall))
-    {
-        x = x + onepixel;
-    }
+// Apply gravity
+vsp += 0.5; 
+if (vsp > 12) vsp = 12;
+
+// Collisions
+if (place_meeting(x + hsp, y, o_solid)) {
+    while (!place_meeting(x + sign(hsp), y, o_solid)) x += sign(hsp);
     hsp = 0;
 }
-x = x + hsp;
+x += hsp;
 
-//Check for vertical collisions and then move if we can
-var onepixel = sign(vsp) //up = -1, down = 1.
-if (place_meeting(x,y+vsp,oWall))
-{
-    //move as close as we can
-    while (!place_meeting(x,y+onepixel,oWall))
-    {
-        y = y + onepixel;
-    }
+if (place_meeting(x, y + vsp, o_solid)) {
+    while (!place_meeting(x, y + sign(vsp), o_solid)) y += sign(vsp);
     vsp = 0;
 }
-y = y + vsp;
+y += vsp;
+
+// Set facing based on input (or velocity)
+if (move > 0)  image_xscale = 1;
+if (move < 0)  image_xscale = -1;
+// Optional: if you prefer velocity-based
+// if (hsp > 0.1) image_xscale = 1;
+// if (hsp < -0.1) image_xscale = -1;
+
+// --- State / Animation ---
+if (!place_meeting(x, y+1, o_solid)) {
+    state = "jump";
+}
+else if (keyboard_check(vk_right) || keyboard_check(vk_left)) {
+    state = "run";
+}
+else {
+    state = "idle";
+}
+
+// --- Switch Sprites ---
+switch (state) {
+    case "idle": sprite_index = spritePlayerIdle; image_speed = 0.2; break;
+    case "run":  sprite_index = spritePlayerRun;  image_speed = 1;   break;
+    case "jump": sprite_index = spritePlayerJump; image_speed = 0.3; break;
+}

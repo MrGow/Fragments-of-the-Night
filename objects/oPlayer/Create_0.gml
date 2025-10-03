@@ -1,5 +1,6 @@
-grv = 0.2; //gravity
-hsp = 0; //current horizontal speed
-vsp = 0; //current vertical speed
-hsp_walk = 4; //walk speed
-vsp_jump = -5; //jump speed
+// o_player: Create Event
+state = "idle";
+hsp = 0; // horizontal speed
+vsp = 0; // vertical speed
+move_speed = 3;
+jump_speed = -8;

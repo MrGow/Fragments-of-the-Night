@@ -20,6 +20,8 @@
     {"name":"oPlayer","order":1,"path":"objects/oPlayer/oPlayer.yy",},
     {"name":"Room1","order":1,"path":"rooms/Room1/Room1.yy",},
     {"name":"Sprite3","order":2,"path":"sprites/Sprite3/Sprite3.yy",},
+    {"name":"spritePlayerJump","order":4,"path":"sprites/spritePlayerJump/spritePlayerJump.yy",},
+    {"name":"spritePlayerRun","order":3,"path":"sprites/spritePlayerRun/spritePlayerRun.yy",},
     {"name":"sWall","order":1,"path":"sprites/sWall/sWall.yy",},
   ],
 }
