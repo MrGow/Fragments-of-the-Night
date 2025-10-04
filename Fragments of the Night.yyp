@@ -37,7 +37,8 @@
   "name":"Fragments of the Night",
   "resources":[
     {"id":{"name":"o_solid","path":"objects/o_solid/o_solid.yy",},},
-    {"id":{"name":"objectCamera","path":"objects/objectCamera/objectCamera.yy",},},
+    {"id":{"name":"oCamera","path":"objects/oCamera/oCamera.yy",},},
+    {"id":{"name":"oGame","path":"objects/oGame/oGame.yy",},},
     {"id":{"name":"oPlayer","path":"objects/oPlayer/oPlayer.yy",},},
     {"id":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
     {"id":{"name":"Room2","path":"rooms/Room2/Room2.yy",},},

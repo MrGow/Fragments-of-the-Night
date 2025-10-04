@@ -1,12 +1,11 @@
 {
   "$GMObject":"",
-  "%Name":"objectCamera",
+  "%Name":"oGame",
   "eventList":[
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":0,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
-    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":3,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
   ],
   "managed":true,
-  "name":"objectCamera",
+  "name":"oGame",
   "overriddenProperties":[],
   "parent":{
     "name":"Objects",
@@ -32,5 +31,5 @@
   "solid":false,
   "spriteId":null,
   "spriteMaskId":null,
-  "visible":false,
+  "visible":true,
 }

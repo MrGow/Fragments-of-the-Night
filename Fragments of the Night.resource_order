@@ -18,7 +18,8 @@
     {"name":"Timelines","order":8,"path":"folders/Timelines.yy",},
   ],
   "ResourceOrderSettings":[
-    {"name":"objectCamera","order":2,"path":"objects/objectCamera/objectCamera.yy",},
+    {"name":"oCamera","order":2,"path":"objects/oCamera/oCamera.yy",},
+    {"name":"oGame","order":3,"path":"objects/oGame/oGame.yy",},
     {"name":"oPlayer","order":1,"path":"objects/oPlayer/oPlayer.yy",},
     {"name":"Room1","order":1,"path":"rooms/Room1/Room1.yy",},
     {"name":"Sprite3","order":2,"path":"sprites/Sprite3/Sprite3.yy",},
