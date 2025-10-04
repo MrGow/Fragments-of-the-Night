@@ -1,55 +1,73 @@
-// 1 = right key, -1 = left key, 0 = no input
-var move = keyboard_check(vk_right) - keyboard_check(vk_left);
+// --- INPUT ---
+var move_input = keyboard_check(vk_right) - keyboard_check(vk_left);
+var atk_pressed = keyboard_check_pressed(ord("X")); // change key if needed
 
+// --- COOLDOWN ---
+if (attack_cooldown > 0) attack_cooldown--;
 
-// o_player: Step Event
+// --- ATTACK TRIGGER ---
+if (state != "attack" && can_attack && atk_pressed) {
+    state        = "attack";
+    sprite_index = spriteSwordAttack;   // attack sprite (make sure Loop = OFF)
+    image_index  = 0;
+    image_speed  = 1;
+    attack_lock  = true;
 
-// --- Movement ---
-hsp = (keyboard_check(vk_right) - keyboard_check(vk_left)) * move_speed;
+    // If you want cooldowns, uncomment these:
+    // attack_cooldown = room_speed * 0.2; // ~0.2s
+    // can_attack = false;
+}
 
-// Jump
-if (keyboard_check_pressed(vk_space) && place_meeting(x, y+1, o_solid)) {
+// --- MOVEMENT ---
+var hsp_target = move_input * move_speed;
+
+// Lock horizontal while attacking
+if (state == "attack") hsp_target = 0;
+
+hsp = hsp_target;
+
+// Jump (block during attack)
+if (state != "attack" && keyboard_check_pressed(vk_space) && place_meeting(x, y+1, o_solid)) {
     vsp = jump_speed;
 }
 
-// Apply gravity
-vsp += 0.5; 
+// Gravity
+vsp += 0.5;
 if (vsp > 12) vsp = 12;
 
-// Collisions
+// Collisions (H)
 if (place_meeting(x + hsp, y, o_solid)) {
     while (!place_meeting(x + sign(hsp), y, o_solid)) x += sign(hsp);
     hsp = 0;
 }
 x += hsp;
 
+// Collisions (V)
 if (place_meeting(x, y + vsp, o_solid)) {
     while (!place_meeting(x, y + sign(vsp), o_solid)) y += sign(vsp);
     vsp = 0;
 }
 y += vsp;
 
-// Set facing based on input (or velocity)
-if (move > 0)  image_xscale = 1;
-if (move < 0)  image_xscale = -1;
-// Optional: if you prefer velocity-based
-// if (hsp > 0.1) image_xscale = 1;
-// if (hsp < -0.1) image_xscale = -1;
+// Facing
+if (move_input > 0)  image_xscale = 1;
+if (move_input < 0)  image_xscale = -1;
 
-// --- State / Animation ---
-if (!place_meeting(x, y+1, o_solid)) {
-    state = "jump";
-}
-else if (keyboard_check(vk_right) || keyboard_check(vk_left)) {
-    state = "run";
-}
-else {
-    state = "idle";
+// --- STATE / ANIMATION (skip if attacking) ---
+if (state != "attack") {
+    if (!place_meeting(x, y+1, o_solid)) {
+        state = "jump";
+        sprite_index = spritePlayerJump; image_speed = 0.3;
+    } else if (keyboard_check(vk_right) || keyboard_check(vk_left)) {
+        state = "run";
+        sprite_index = spritePlayerRun;  image_speed = 1;
+    } else {
+        state = "idle";
+        sprite_index = spritePlayerIdle; image_speed = 0.2;
+    }
 }
 
-// --- Switch Sprites ---
-switch (state) {
-    case "idle": sprite_index = spritePlayerIdle; image_speed = 0.2; break;
-    case "run":  sprite_index = spritePlayerRun;  image_speed = 1;   break;
-    case "jump": sprite_index = spritePlayerJump; image_speed = 0.3; break;
+// --- FAILSAFE: if attack sprite somehow loops, force animation end ---
+if (state == "attack" && image_index >= image_number - 1) {
+    event_perform(ev_other, ev_animation_end);
 }

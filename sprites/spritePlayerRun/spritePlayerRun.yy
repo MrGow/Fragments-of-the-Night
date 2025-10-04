@@ -1,7 +1,7 @@
 {
   "$GMSprite":"",
   "%Name":"spritePlayerRun",
-  "bboxMode":0,
+  "bboxMode":2,
   "bbox_bottom":39,
   "bbox_left":0,
   "bbox_right":50,
@@ -53,8 +53,8 @@
   },
   "origin":7,
   "parent":{
-    "name":"Sprites",
-    "path":"folders/Sprites.yy",
+    "name":"spritePlayer",
+    "path":"folders/Sprites/spritePlayer.yy",
   },
   "preMultiplyAlpha":false,
   "resourceType":"GMSprite",
@@ -87,7 +87,7 @@
     },
     "name":"spritePlayerRun",
     "playback":1,
-    "playbackSpeed":9.0,
+    "playbackSpeed":12.0,
     "playbackSpeedType":0,
     "resourceType":"GMSequence",
     "resourceVersion":"2.0",

@@ -1,6 +1,20 @@
-// o_player: Create Event
+// Player state
 state = "idle";
-hsp = 0; // horizontal speed
-vsp = 0; // vertical speed
-move_speed = 3;
-jump_speed = -8;
+
+// Movement
+hsp = 0;
+vsp = 0;
+move_speed = 2.5;    // adjust to taste
+jump_speed = -9;     // adjust to taste
+
+// Attack system
+attack_lock = false;
+can_attack = true;
+attack_cooldown = 0;
+
+// Starting sprite
+sprite_index = spritePlayerIdle;
+image_speed = 0.2;
+image_xscale = 1;
+
+
