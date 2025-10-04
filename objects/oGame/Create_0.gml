@@ -1,8 +1,6 @@
 // No texture filtering (no blur)
 gpu_set_texfilter(false);
 
-// Optional: turn off color interpolation if you haven’t globally
-texture_set_interpolation(false);
 
 // Set GUI space to base resolution so HUD is easy to place
 display_set_gui_size(640, 360);
