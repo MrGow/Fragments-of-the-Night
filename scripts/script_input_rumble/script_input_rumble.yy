@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"script_input_rumble",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"script_input_rumble",
+  "parent":{
+    "name":"Shaders",
+    "path":"folders/Sequences/Shaders.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}
