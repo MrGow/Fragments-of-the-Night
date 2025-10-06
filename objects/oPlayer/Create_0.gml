@@ -16,10 +16,10 @@ attack_cooldown = 0;  // optional cooldown timer (frames)
 
 // Starting sprite
 sprite_index  = spritePlayerIdle;
+mask_index = spritePlayerCollisionMask
 image_speed   = 0.4;
 image_xscale  = 1;
 // Create event of oPlayer
-mask_index = spritePlayerCollisionMask;
 
 
 // (Optional) which sprite to use for the attack state:
