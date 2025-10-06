@@ -46,6 +46,7 @@
     {"id":{"name":"script_input_rumble","path":"scripts/script_input_rumble/script_input_rumble.yy",},},
     {"id":{"name":"Sprite3","path":"sprites/Sprite3/Sprite3.yy",},},
     {"id":{"name":"spriteGridOverlay","path":"sprites/spriteGridOverlay/spriteGridOverlay.yy",},},
+    {"id":{"name":"spritePlayerCollisionMask","path":"sprites/spritePlayerCollisionMask/spritePlayerCollisionMask.yy",},},
     {"id":{"name":"spritePlayerIdle","path":"sprites/spritePlayerIdle/spritePlayerIdle.yy",},},
     {"id":{"name":"spritePlayerJump","path":"sprites/spritePlayerJump/spritePlayerJump.yy",},},
     {"id":{"name":"spritePlayerRun","path":"sprites/spritePlayerRun/spritePlayerRun.yy",},},

@@ -24,6 +24,7 @@
     {"name":"Prologue","order":1,"path":"rooms/Prologue/Prologue.yy",},
     {"name":"Sprite3","order":2,"path":"sprites/Sprite3/Sprite3.yy",},
     {"name":"spriteGridOverlay","order":6,"path":"sprites/spriteGridOverlay/spriteGridOverlay.yy",},
+    {"name":"spritePlayerCollisionMask","order":4,"path":"sprites/spritePlayerCollisionMask/spritePlayerCollisionMask.yy",},
     {"name":"spritePlayerJump","order":1,"path":"sprites/spritePlayerJump/spritePlayerJump.yy",},
     {"name":"spritePlayerRun","order":2,"path":"sprites/spritePlayerRun/spritePlayerRun.yy",},
     {"name":"spriteSwordAttack","order":3,"path":"sprites/spriteSwordAttack/spriteSwordAttack.yy",},

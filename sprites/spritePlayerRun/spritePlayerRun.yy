@@ -1,7 +1,7 @@
 {
   "$GMSprite":"",
   "%Name":"spritePlayerRun",
-  "bboxMode":2,
+  "bboxMode":0,
   "bbox_bottom":39,
   "bbox_left":0,
   "bbox_right":50,

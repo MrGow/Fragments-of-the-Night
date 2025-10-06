@@ -1,10 +1,10 @@
 {
   "$GMSprite":"",
   "%Name":"spriteSwordAttack",
-  "bboxMode":2,
-  "bbox_bottom":52,
+  "bboxMode":0,
+  "bbox_bottom":51,
   "bbox_left":14,
-  "bbox_right":105,
+  "bbox_right":104,
   "bbox_top":5,
   "collisionKind":1,
   "collisionTolerance":0,
