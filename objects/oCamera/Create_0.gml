@@ -1,54 +1,33 @@
-// --- CONFIG ---
-cell_w = 640;
-cell_h = 360;
-smooth_snap = 0.25;
-target_obj = oPlayer;   // store the TYPE
-target = noone;         // we'll resolve the INSTANCE in Step
+/// oCamera - Create (early-pan version)
 
-enter_gate_x = 24;   // must move this many px into next cell to switch (horizontal)
-enter_gate_y = 48;   // a bit larger for vertical to avoid bobbing
-snap_cd_max  = 8;    // frames to ignore further snaps after a switch
-snap_cd      = 0;
+target_obj = oPlayer;
+target     = noone;
 
-
-deadzone_margin = 24;
-
-// --- CAMERA SETUP ---
 view_index = 0;
 cam = view_camera[view_index];
+camera_set_view_size(cam, 640, 360);
 
-view_w = camera_get_view_width(cam);
-view_h = camera_get_view_height(cam);
-if (view_w != cell_w || view_h != cell_h) {
-    camera_set_view_size(cam, cell_w, cell_h);
-    view_w = cell_w; view_h = cell_h;
-}
+active_zone = noone;
 
-// Track current cell & desired view pos
-cur_cell_x = -9999;
-cur_cell_y = -9999;
-tview_x = 0;
-tview_y = 0;
+// ---------- Early-pan tuning ----------
+deadzone_frac_x  = 0.30;   // fraction of view width on each side (smaller = pans earlier)
+deadzone_frac_y  = 0.14;   // fraction of view height (smaller = earlier)
+deadzone_min_x   = 10;     // pixel floor
+deadzone_min_y   = 10;
 
-// Boss/lock support
-lock_enabled = false;
-lock_left = 0;
-lock_top  = 0;
-lock_right = room_width;
-lock_bottom = room_height;
+pan_bias_max     = 40;     // forward-shift of the deadzone window
+smooth_follow    = 0.15;   // camera lerp
+y_bias           = -12;    // lift camera to see above player
 
-// Optional: persistent safety (avoid duplicate cameras across rooms)
-if (instance_number(oCamera) > 1) instance_destroy();
+// Look-ahead driven by actual player movement (dx), not a specific var name
+lookahead_max    = 80;     // px
+lookahead_lerp   = 0.18;   // responsiveness
+lookahead_x      = 0;      // runtime
 
-var p = instance_find(target_obj, 0);
-if (p != noone) {
-    var cell_x = floor(p.x / cell_w);
-    var cell_y = floor(p.y / cell_h);
-    tview_x = cell_x * cell_w;
-    tview_y = cell_y * cell_h;
-    camera_set_view_pos(cam, tview_x, tview_y);
-    cur_cell_x = cell_x;
-    cur_cell_y = cell_y;
-}
+// Track previous player x to compute dx
+prev_px = 0;
+
+// Single instance safety
+if (instance_number(oCamera) > 1) { instance_destroy(); exit; }
 
 
