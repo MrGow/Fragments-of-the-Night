@@ -1,12 +1,12 @@
-/// oCamDoor Create
-// Set these per instance in the room editor:
-// target_zone_name : string name to find an oCamZone (or directly set target_zone_id)
-// use_fade         : whether to fade during snap (true/false)
-// offset_x/y       : optional pixel offsets to nudge camera within target zone center
+/// oCamDoor - Create (bidirectional door)
+use_fade      = false;   // set true if you have oFade and want fades
+activate_in   = 10;      // frames before door starts working (avoids spawn triggers)
+cooldown_max  = 10;      // frames after use to prevent bounce-back
+cooldown      = 0;
 
+// Optional editor-facing var (define via Object Variables UI is fine too)
 if (!variable_instance_exists(id, "target_zone_name")) target_zone_name = "";
-if (!variable_instance_exists(id, "use_fade"))         use_fade = true;
-if (!variable_instance_exists(id, "offset_x"))         offset_x = 0;
-if (!variable_instance_exists(id, "offset_y"))         offset_y = 0;
 
-target_zone_id = noone; // can be set directly if you want
+// Internal holders that WITH(oCamZone) will write into (must be instance vars)
+z_hit0 = noone;
+z_hit1 = noone;
