@@ -1,19 +1,20 @@
 /// oCamDoor - Collision with oPlayer
-if (activate_in > 0 || cooldown > 0) exit;
+if (activate_in > 0 || cooldown > 0 || !armed) exit;
 
 var cam = instance_find(oCamera, 0);
 if (cam == noone) exit;
 
-// reset hit slots on THIS door instance so WITH(...) can fill them
-z_hit0 = noone;
-z_hit1 = noone;
+// reset zone hits
+z_hit0 = noone; z_hit1 = noone;
 
-// current active zone from camera (if any)
+with (cam) transition_guard = transition_guard_max;
+
+
+// current camera zone (if any)
 var z_cur = noone;
 if (instance_exists(cam.active_zone)) z_cur = cam.active_zone;
 
-// Find up to two zones that overlap THIS door's bbox.
-// Inside WITH(oCamZone): self = zone, other = THIS oCamDoor instance.
+// gather up to two zones overlapping THIS door’s bbox
 with (oCamZone) {
     if (left   < other.bbox_right &&
         right  > other.bbox_left  &&
@@ -25,17 +26,40 @@ with (oCamZone) {
     }
 }
 
-// Decide destination zone
+// decide destination
 var z_dst = noone;
 
+// If two neighbors: choose by player movement direction (stable)
 if (z_hit0 != noone && z_hit1 != noone) {
-    // two neighbors: go to the one that's NOT current
-    z_dst = (z_cur == z_hit0) ? z_hit1 : z_hit0;
-} else if (z_hit0 != noone && z_hit0 != z_cur) {
-    // single neighbor and it's not current
-    z_dst = z_hit0;
-} else if (target_zone_name != "") {
-    // named fallback
+    var p  = other; // door as 'other' here; we need player instance:
+    var pl = instance_nearest(x, y, oPlayer);
+    if (pl != noone) {
+        var dx = pl.x - pl.xprevious;
+        var dy = pl.y - pl.yprevious;
+
+        // find zone centers
+        var z0cx = (z_hit0.left + z_hit0.right) * 0.5;
+        var z1cx = (z_hit1.left + z_hit1.right) * 0.5;
+        var z0cy = (z_hit0.top  + z_hit0.bottom) * 0.5;
+        var z1cy = (z_hit1.top  + z_hit1.bottom) * 0.5;
+
+        if (abs(dx) >= abs(dy)) {
+            // horizontal intent
+            z_dst = (dx >= 0) ? (z1cx > z0cx ? z_hit1 : z_hit0)
+                              : (z1cx < z0cx ? z_hit1 : z_hit0);
+        } else {
+            // vertical intent
+            z_dst = (dy >= 0) ? (z1cy > z0cy ? z_hit1 : z_hit0)
+                              : (z1cy < z0cy ? z_hit1 : z_hit0);
+        }
+    }
+}
+
+// If only one neighbor and it's not current, use it
+if (z_dst == noone && z_hit0 != noone && z_hit0 != z_cur) z_dst = z_hit0;
+
+// Fallback by name
+if (z_dst == noone && target_zone_name != "") {
     with (oCamZone) {
         if (string(zone_name) == string(other.target_zone_name)) { z_dst = id; break; }
     }
@@ -43,7 +67,7 @@ if (z_hit0 != noone && z_hit1 != noone) {
 
 if (z_dst == noone) exit;
 
-// Do the transition (optional fade)
+// ---- perform transition ----
 with (cam) {
     active_zone = z_dst;
 
@@ -66,11 +90,19 @@ with (cam) {
     }
 }
 
-// Guard against immediate re-trigger
+// disarm until player exits; add cooldown and nudge player past the gate
+armed    = false;
 cooldown = cooldown_max;
 
-// Optional: tiny nudge to avoid re-colliding the same frame
-if (abs(bbox_right - other.bbox_left) < 4) other.x += 2;
-if (abs(bbox_left  - other.bbox_right) < 4) other.x -= 2;
-if (abs(bbox_bottom- other.bbox_top) < 4) other.y += 2;
-if (abs(bbox_top   - other.bbox_bottom) < 4) other.y -= 2;
+// nudge player into the destination zone to avoid immediate re-collision
+var pl = other; // 'other' is the player in this Collision event
+if (pl != noone) {
+    var dx = pl.x - pl.xprevious;
+    var dy = pl.y - pl.yprevious;
+
+    if (abs(dx) >= abs(dy)) {
+        pl.x += (dx >= 0) ? 4 : -4;
+    } else {
+        pl.y += (dy >= 0) ? 4 : -4;
+    }
+}
