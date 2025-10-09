@@ -11,11 +11,11 @@
   "name":"oCamera",
   "overriddenProperties":[],
   "parent":{
-    "name":"Objects",
-    "path":"folders/Objects.yy",
+    "name":"CameraObjects",
+    "path":"folders/Objects/CameraObjects.yy",
   },
   "parentObjectId":null,
-  "persistent":false,
+  "persistent":true,
   "physicsAngularDamping":0.1,
   "physicsDensity":0.5,
   "physicsFriction":0.2,
@@ -32,7 +32,10 @@
   "resourceType":"GMObject",
   "resourceVersion":"2.0",
   "solid":false,
-  "spriteId":null,
+  "spriteId":{
+    "name":"Camera",
+    "path":"sprites/Camera/Camera.yy",
+  },
   "spriteMaskId":null,
   "visible":false,
 }

@@ -2,9 +2,19 @@
 if (activate_in > 0) activate_in--;
 if (cooldown > 0)    cooldown--;
 
-// (Re)arm once the player is no longer overlapping the door
-if (rearm_when_cleared && cooldown <= 0) {
-    if (!place_meeting(x, y, oPlayer)) {
-        armed = true;
+var pl = instance_nearest(x, y, oPlayer); // or any way you reference the player
+hovering = (pl != noone) && place_meeting(x, y, oPlayer);
+
+// Arm only AFTER the player is fully clear (prevents instant fire on first touch)
+if (!hovering && cooldown <= 0 && activate_in <= 0) armed = true;
+
+// Count Up-hold frames only when overlapping AND armed
+if (hovering && armed && mode == "mirror") {
+    if (up_pressed()) interact_cnt++; else interact_cnt = 0;
+
+    if (interact_cnt >= interact_need) {
+        do_mirror_transition(pl);
     }
+} else {
+    interact_cnt = 0;
 }

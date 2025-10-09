@@ -1,14 +1,11 @@
-/// oFade Create
-alpha       = 0;
-state       = 0;   // 0 idle, 1 fading out, 2 fading in
-speed       = 0.2; // fade speed 0..1
-callback_ok = false; // when true, tell camera to snap mid-fade-out
+/// oFade - Create
+alpha        = 0;
+state        = 0;      // 0 idle, 1 out, 2 in, 3 in-transit
+speed        = 0.10;
+target_room  = room;   // <— Room-typed variable (starts as current room)
+pending_switch = false;
+transit_ttl  = 0;
 
-/// oFade method: start_fade_out_in
-start_fade_out_in = function() {
-    // Begin fade out only if idle
-    if (state == 0) {
-        state = 1;
-        callback_ok = false;
-    }
-};
+persistent   = true;
+visible      = false;
+if (instance_number(oFade) > 1) { instance_destroy(); exit; }

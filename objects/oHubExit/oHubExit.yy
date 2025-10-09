@@ -1,16 +1,18 @@
 {
   "$GMObject":"",
-  "%Name":"oCamZone",
+  "%Name":"oHubExit",
   "eventList":[
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":0,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":3,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
+    {"$GMEvent":"v1","%Name":"","collisionObjectId":{"name":"oPlayer","path":"objects/oPlayer/oPlayer.yy",},"eventNum":0,"eventType":4,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
+    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":64,"eventType":8,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
   ],
   "managed":true,
-  "name":"oCamZone",
+  "name":"oHubExit",
   "overriddenProperties":[],
   "parent":{
-    "name":"CameraObjects",
-    "path":"folders/Objects/CameraObjects.yy",
+    "name":"SaveRoomTeleport",
+    "path":"folders/Objects/SaveRoomTeleport.yy",
   },
   "parentObjectId":null,
   "persistent":false,
@@ -26,16 +28,14 @@
   "physicsShape":1,
   "physicsShapePoints":[],
   "physicsStartAwake":true,
-  "properties":[
-    {"$GMObjectProperty":"v1","%Name":"zone_name","filters":[],"listItems":[],"multiselect":false,"name":"zone_name","rangeEnabled":false,"rangeMax":10.0,"rangeMin":0.0,"resourceType":"GMObjectProperty","resourceVersion":"2.0","value":"\" \"","varType":2,},
-  ],
+  "properties":[],
   "resourceType":"GMObject",
   "resourceVersion":"2.0",
   "solid":false,
   "spriteId":{
-    "name":"spriteCamZone",
-    "path":"sprites/spriteCamZone/spriteCamZone.yy",
+    "name":"Input",
+    "path":"sprites/Input/Input.yy",
   },
   "spriteMaskId":null,
-  "visible":false,
+  "visible":true,
 }
