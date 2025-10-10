@@ -51,6 +51,7 @@
     {"id":{"name":"oHubExit","path":"objects/oHubExit/oHubExit.yy",},},
     {"id":{"name":"oInput","path":"objects/oInput/oInput.yy",},},
     {"id":{"name":"oJester","path":"objects/oJester/oJester.yy",},},
+    {"id":{"name":"oPauseMenu","path":"objects/oPauseMenu/oPauseMenu.yy",},},
     {"id":{"name":"oPlayer","path":"objects/oPlayer/oPlayer.yy",},},
     {"id":{"name":"oSolid","path":"objects/oSolid/oSolid.yy",},},
     {"id":{"name":"oSpawn","path":"objects/oSpawn/oSpawn.yy",},},

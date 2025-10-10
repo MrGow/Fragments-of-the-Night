@@ -1,12 +1,41 @@
-// No texture filtering (no blur)
-gpu_set_texfilter(false);
+// Globals
+if (!variable_global_exists("paused"))        global.paused        = false;
+if (!variable_global_exists("pause_menu_id")) global.pause_menu_id = noone;
 
+// Debounce
+can_toggle = true;
 
-// Set GUI space to base resolution so HUD is easy to place
-display_set_gui_size(640, 360);
+// Fullscreen + GUI
+window_set_fullscreen(true);
+display_set_gui_size(1920, 1080);
+display_set_gui_maximize(0, 0);
 
-// Resize window to the largest integer multiple that fits the monitor
-var dw = display_get_width();
-var dh = display_get_height();
-var scale = max(1, min(floor(dw/640), floor(dh/360)));
-window_set_size(640*scale, 360*scale);
+// Make sure the application surface is on (some projects turn it off)
+application_surface_enable(true);
+
+// Pause helpers — order matters
+open_pause = function() {
+    if (global.paused) return;
+
+    // Freeze world but keep THIS instance active
+    instance_deactivate_all(true);
+
+    // Create menu AFTER deactivation so it remains active
+    global.pause_menu_id = instance_create_depth(0, 0, -100000, oPauseMenu);
+
+    audio_pause_all();
+    global.paused = true;
+};
+
+close_pause = function() {
+    if (!global.paused) return;
+
+    if (instance_exists(global.pause_menu_id)) with (global.pause_menu_id) instance_destroy();
+    global.pause_menu_id = noone;
+
+    audio_resume_all();
+    instance_activate_all();
+
+    global.paused = false;
+};
+
