@@ -12,8 +12,8 @@
   "name":"oCamDoor",
   "overriddenProperties":[],
   "parent":{
-    "name":"CameraObjects",
-    "path":"folders/Objects/CameraObjects.yy",
+    "name":"SaveRoomTeleport",
+    "path":"folders/Objects/SaveRoomTeleport.yy",
   },
   "parentObjectId":null,
   "persistent":false,
