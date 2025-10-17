@@ -10,12 +10,16 @@ y = owner.y;
 
 // Cooldown
 if (attack_cd > 0) attack_cd -= dt;
+    
+// Gate by global lock (set by door/fade); still allows your keyboard fallback
+var inputs_blocked = (!is_undefined(global.input)) &&
+                     (!global.input.input_enabled || global.input.player_locked || global.input.ui_captured);
 
 // --- READ INPUT (single source of truth) ---
 var pressed = false;
 
 // Prefer oInput (one-frame pulse set in Begin Step, cleared in End Step)
-if (object_exists(oInput) && instance_number(oInput) > 0) {
+if (object_exists(oInput) && instance_number(oInput) > 0){
     pressed = global.input.attack_pressed;
 } else {
     // Fallback if oInput isn't present yet
@@ -23,7 +27,8 @@ if (object_exists(oInput) && instance_number(oInput) > 0) {
 }
 
 // --- SPAWN SLASH ---
-if (pressed && attack_cd <= 0) {
+if (!inputs_blocked && pressed && attack_cd <= 0) {
+ {
     // Optional: play attack sprite if available
     var use_attack_sprite = spr_attack;
     if (use_attack_sprite == -1 && variable_instance_exists(owner, "spriteAttack")) {
@@ -55,3 +60,4 @@ if (pressed && attack_cd <= 0) {
 
 
 
+}

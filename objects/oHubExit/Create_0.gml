@@ -1,3 +1,6 @@
+
+
+
 if (!variable_instance_exists(id,"prompt_text")) prompt_text = "Press \u2191 to leave";
 if (!variable_instance_exists(id,"use_fade"))    use_fade    = true;
 

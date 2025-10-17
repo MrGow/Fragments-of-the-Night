@@ -1,4 +1,21 @@
 /// oCamDoor - Create
+if (variable_instance_exists(id,"input_locked")) input_locked = false;
+
+// --- Global input lock helpers ---
+function _lock_input() {
+    if (!is_undefined(global.input)) {
+        global.input.input_enabled = false;
+        global.input.player_locked = true;
+        global.input.ui_captured   = true;
+    }
+}
+function _unlock_input() {
+    if (!is_undefined(global.input)) {
+        global.input.input_enabled = true;
+        global.input.player_locked = false;
+        global.input.ui_captured   = false;
+    }
+}
 
 // Per-instance settings (or set in Variables panel)
 if (!variable_instance_exists(id,"mode"))           mode = "mirror";
@@ -37,14 +54,12 @@ do_mirror_transition = function(pl) {
     // Where to land in SaveRoom
     global.spawn_tag_next  = "mirror_entry";
 
-    // Optional: lock input briefly
-    if (freeze_player && pl != noone) {
-        with (pl) {
-            input_locked = true;
-            hsp = 0; vsp = 0;
-            alarm[0] = 12; // ~0.2s at 60fps
-        }
-    }
+    // Lock input globally (survives room switch; we’ll unlock in the destination)
+if (freeze_player) {
+    _lock_input();
+}
+if (pl != noone) { with (pl) { hsp = 0; vsp = 0; } }
+
 
     // Find a safe instance layer for fade
     var _layer = layer_get_id("Actors");

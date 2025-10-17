@@ -1,6 +1,6 @@
 /// oSunPilgrim — Step
 
-// ----- EARLY-OUT IF DEAD (let the death anim play; AI frozen) -----
+// ----- EARLY-OUT IF DEAD (freeze AI; let anim play to Animation End) -----
 if (is_dead) {
     if (death_sprite != -1) {
         if (sprite_index != death_sprite) { sprite_index = death_sprite; image_index = 0; }
@@ -24,15 +24,7 @@ if (!instance_exists(target) && instance_exists(oPlayer)) {
 }
 
 // ----- (optional) gravity / collisions -----
-/*
-vsp += grav;
-y += vsp;
-*/
-
-// ----- helper: face unless locked during attack -----
-function _face(dir) {
-    if (!attack_face_locked && dir != 0) image_xscale = dir;
-}
+// vsp += grav; y += vsp;
 
 // ================== STATE MACHINE ==================
 switch (state) {
@@ -45,16 +37,14 @@ switch (state) {
         hsp = walk_speed * patrol_dir;
         x += hsp;
 
-        // flip at bounds
+        // flip at bounds and face along motion
         if (x <= left_bound)  patrol_dir = 1;
         if (x >= right_bound) patrol_dir = -1;
+        _set_face(patrol_dir);
 
-        _face(patrol_dir);
-
-        // choose animation (run while moving, idle if effectively stopped)
+        // anim
         if (abs(hsp) > 0.05) {
             sprite_index = spriteSunPilgrimRun;
-            // movement-synced image_speed to avoid foot slide
             var rate = 0.16 / max(0.001, walk_speed);
             image_speed = clamp(abs(hsp) * rate, 0.08, 0.22);
         } else {
@@ -63,7 +53,7 @@ switch (state) {
             image_speed  = 0;
         }
 
-        // aggro if player nearby (mostly horizontal check, small vertical tolerance)
+        // aggro if player nearby
         if (instance_exists(target)) {
             var dx = abs(target.x - x);
             var dy = abs(target.y - y);
@@ -75,8 +65,8 @@ switch (state) {
     case SP_STATE.CHASE: {
         if (!instance_exists(target)) { state = SP_STATE.PATROL; break; }
 
-        var dir  = sign(target.x - x);
-        _face(dir);
+        var dir = sign(target.x - x);
+        _set_face(dir);
 
         hsp = dir * run_speed;
         x += hsp;
@@ -87,7 +77,7 @@ switch (state) {
 
         var dist = point_distance(x, y, target.x, target.y);
 
-        // enter attack only when in range and off cooldown
+        // enter attack when in range & off cooldown
         if (dist <= attack_range && attack_cd <= 0) {
             state = SP_STATE.ATTACK;
             sprite_index = spriteSunPilgrimAttack;
@@ -95,14 +85,14 @@ switch (state) {
             image_speed  = 0.25;
             attack_spawned_hitbox = false;
 
-            // hard-face player and lock facing for the swing
-            var f = sign(target.x - x); if (f == 0) f = (image_xscale == 0) ? 1 : image_xscale;
-            image_xscale = f;
+            // lock facing toward player for the swing (respect base art)
+            var f = sign(target.x - x);
+            if (f == 0) f = (image_xscale == 0) ? 1 : sign(image_xscale);
+            image_xscale = _dir_to_xscale(f);
             attack_face_locked = true;
 
             hsp = 0;
         }
-        // leash back to patrol if player gets far
         else if (dist > aggro_range * 1.5) {
             state = SP_STATE.PATROL;
             patrol_dir = choose(-1, 1);
@@ -115,7 +105,7 @@ switch (state) {
         sprite_index = spriteSunPilgrimAttack;
         image_speed  = 0.25;
 
-        // spawn hitbox exactly once in active frames (tune to your sheet)
+        // spawn hitbox exactly once in active frames (tune if needed)
         var active_a = 3.0;
         var active_b = 5.5;
 
@@ -123,10 +113,9 @@ switch (state) {
             attack_spawned_hitbox = true;
 
             var off = 22;
-            var hb = instance_create_layer(x + image_xscale * off, y, layer, oSunPilgrimSlash);
+            var hb = instance_create_layer(x + _forward_sign() * off, y, layer, oSunPilgrimSlash);
             hb.owner          = id;
-            hb.direction_sign = image_xscale;
-            // if oSunPilgrimSlash uses its own lifetime/damage, it will read defaults
+            hb.direction_sign = _forward_sign();
         }
 
         // stand still while attacking
@@ -134,8 +123,4 @@ switch (state) {
     } break;
 }
 
-// ----- apply horizontal movement if you later add collisions -----
-/*
-x += hsp;
-*/
 

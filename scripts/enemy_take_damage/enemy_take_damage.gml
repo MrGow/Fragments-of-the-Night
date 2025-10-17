@@ -10,10 +10,14 @@ with (_t) {
     if (!variable_instance_exists(id,"is_dead")) is_dead = false;
     if (is_dead) exit;
 
+    var _hp_prev = hp;
     hp -= _amt;
+
+    show_debug_message("[DMG] " + object_get_name(object_index) + " HP " + string(_hp_prev) + " -> " + string(hp));
 
     if (hp <= 0) {
         is_dead = true;
+
         if (variable_instance_exists(id,"death_sprite") && death_sprite != -1) {
             sprite_index = death_sprite;
             image_index  = 0;
@@ -27,5 +31,6 @@ with (_t) {
         }
     }
 }
+
 
 
