@@ -1,22 +1,15 @@
-/// oPlayerCombat — Create
-owner              = noone;          // player instance (set after create)
-attack_key_primary = ord("Z");       // <- keyboard key for attack
-attack_key_alt     = vk_space;       // <- optional alt key (or set to -1 to disable)
+/// oPlayerCombat — Create (spawner)
+owner              = noone;          // oPlayer instance; we’ll resolve if not set
+attack_key_primary = ord("Z");       // change if you like
+attack_key_alt     = -1;             // set to vk_space or similar if you want a 2nd key
 
-attack_cd_s        = 0.28;
+attack_cd_s        = 0.30;           // cooldown between swings (seconds)
 attack_cd          = 0;
-spawned_this_swing = false;
 
-// timing windows relative to the player's attack sprite frames
-hit_start = 3.0;     // first active frame
-hit_end   = 6.0;     // last active frame
+slash_forward_px   = 18;             // spawn offset in front of player
+slash_damage       = 1;              // REAL number; what we pass to the hitbox
 
-// offset in front of the player (pixels)
-hit_off   = 18;
-
-// damage dealt
-atk_damage = 1;
-
-// set this to your player’s attack sprite once (or from outside)
-spr_attack = spriteSwordAttack; // change if your asset name differs
+// Your attack sprite (so we can play it)
+spr_attack         = spriteSwordAttack; // <-- set to your actual attack sprite asset
+attack_anim_speed  = 0.25;
 

@@ -2,12 +2,12 @@
 /// Call like: enemy_take_damage(other, damage, x);
 if (!instance_exists(argument0)) exit;
 
-var _t = argument0;      // target instance (the enemy)
+var _t   = argument0;
 var _amt = max(1, argument1);
-var _fx  = argument2;    // optional from_x
+var _fx  = argument2;
 
 with (_t) {
-    // Defensive defaults
+    // Defensive defaults so missing init can't crash
     if (!variable_instance_exists(id,"is_dead"))            is_dead = false;
     if (!variable_instance_exists(id,"hp"))                 hp = 1;
     if (!variable_instance_exists(id,"death_sprite"))       death_sprite = -1;
