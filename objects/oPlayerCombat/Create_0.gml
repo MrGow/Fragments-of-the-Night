@@ -11,5 +11,5 @@ slash_damage       = 1;              // REAL number
 // Optional attack sprite (not required)
 spr_attack = -1;
 var _maybe = asset_get_index("spriteSwordAttack"); if (_maybe != -1) spr_attack = _maybe;
-attack_anim_speed  = 0.25;
+attack_anim_speed  = 2;
 

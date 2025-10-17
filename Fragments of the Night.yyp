@@ -67,6 +67,7 @@
     {"id":{"name":"Prologue","path":"rooms/Prologue/Prologue.yy",},},
     {"id":{"name":"SaveRoom","path":"rooms/SaveRoom/SaveRoom.yy",},},
     {"id":{"name":"enemy_take_damage","path":"scripts/enemy_take_damage/enemy_take_damage.yy",},},
+    {"id":{"name":"enemy_tick_invuln","path":"scripts/enemy_tick_invuln/enemy_tick_invuln.yy",},},
     {"id":{"name":"script_input_rumble","path":"scripts/script_input_rumble/script_input_rumble.yy",},},
     {"id":{"name":"Camera","path":"sprites/Camera/Camera.yy",},},
     {"id":{"name":"Fade","path":"sprites/Fade/Fade.yy",},},

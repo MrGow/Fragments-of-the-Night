@@ -1,67 +1,41 @@
-/// oSunPilgrim — Create (death config first)
-if (!variable_instance_exists(id,"hp")) hp = 4;
+/// oSunPilgrim — Create
 
-is_dead           = false;                       // parent/DMG script reads this
-death_sprite      = spriteSunPilgrimDeath;      // object asset already in your project
-death_image_speed = 0.25;
-explosion_object  = oSunPilgrimExplosion;       // object asset
-
-// ... keep your existing AI/init after this ...
-
-
-death_sprite     = spriteSunPilgrimDeath;
-explosion_object = oSunPilgrimExplosion; // object ASSET, not an instance
-hp               = 4;
-
-
-///  +1  => default sprite looks to the RIGHT
-///  -1  => default sprite looks to the LEFT (very common in pixel sheets)
-BASE_FACING = -1; // ⬅️ set this correctly for your sheet
-
+// ---- STATS / DEATH VISUALS ----
 hp                = 4;
-walk_speed        = 0.6;
-run_speed         = 1.6;
-aggro_range       = 140;
-attack_range      = 38;
-attack_cooldown_s = 0.8;
-touch_damage      = 0;
+is_dead           = false;
+death_sprite      = spriteSunPilgrimDeath;   // set your asset
+death_image_speed = 1;
+explosion_object  = oSunPilgrimExplosion;    // set to noone if this enemy shouldn't explode
 
-home_x        = x;
+// ---- MOVEMENT / AI ----
+hsp = 0; vsp = 0;
+run_speed   = 1.6;
+walk_speed  = 0.6;
+grav        = 0;    // set >0 if you use vertical collisions
+
+aggro_range  = 140; // start chasing within this horizontal distance
+attack_range = 38;  // start attack within this distance
+
+home_x        = x;  // patrol center
 patrol_radius = 48;
 patrol_dir    = choose(-1, 1);
 
-hsp = 0; vsp = 0;
-grav = 0; // keep 0 until you wire collisions
+// ---- ATTACK CONTROL ----
+attack_cd_s           = 0.70; // seconds between swings
+attack_cd             = 0;
+attack_spawned_hitbox = false;
+attack_face_locked    = false;
 
+// ---- TARGET ----
 target = noone;
 
-enum SP_STATE { PATROL, CHASE, ATTACK, HURT, DEATH }
+// ---- SPRITES / MASK ----
+sprite_index = spriteSunPilgrimIdle;   // idle on spawn
+image_index  = 0;
+image_speed  = 0.18;
+mask_index   = spriteSunPilgrimCollisionMask;
+
+// ---- SIMPLE FSM ----
+enum SP_STATE { PATROL, CHASE, ATTACK }
 state = SP_STATE.PATROL;
 
-image_speed = 0.18;
-attack_cd   = 0;
-attack_spawned_hitbox = false;
-
-// Facing lock during attack
-attack_face_locked = false;
-
-// Visual + mask
-sprite_index = spriteSunPilgrimIdle;
-image_index  = 0;
-mask_index   = spriteSunPilgrimCollisionMask;
-image_alpha  = 1;
-
-// ---------- Helpers (use everywhere) ----------
-function _dir_to_xscale(dir) {
-    // dir is -1 (left), +1 (right) in world terms.
-    // Multiply by BASE_FACING so the visual flip matches your art.
-    return BASE_FACING * clamp(dir, -1, 1);
-}
-function _set_face(dir) {
-    if (!attack_face_locked && dir != 0) image_xscale = _dir_to_xscale(dir);
-}
-function _forward_sign() {
-    // Returns +1 in "in-front-of-him" space, regardless of BASE_FACING.
-    // If he visually faces right, this is +1; if left, it's -1.
-    return sign(image_xscale) * sign(BASE_FACING);
-}
