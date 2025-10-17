@@ -1,5 +1,8 @@
-/// oSunPilgrim — Create (facing-correct)
-/// Set this to match how your art is authored:
+death_sprite     = spriteSunPilgrimDeath;
+explosion_object = oSunPilgrimExplosion; // object ASSET, not an instance
+hp               = 4;
+
+
 ///  +1  => default sprite looks to the RIGHT
 ///  -1  => default sprite looks to the LEFT (very common in pixel sheets)
 BASE_FACING = -1; // ⬅️ set this correctly for your sheet

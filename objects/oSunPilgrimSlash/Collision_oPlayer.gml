@@ -7,8 +7,12 @@ if (other != owner) {
             dealt = true;
         }
     } else {
-        with (other) take_damage(other, other.x);
-        dealt = true;
+        /// oSunPilgrimSlash — Collision with oPlayer
+if (other != owner) {
+    // Call player's damage in the player's context; 'other' here becomes the slash instance
+    with (other) take_damage(other.damage, other.x); // ✅ amount is REAL (slash.damage), from_x is REAL
+}
+
     }
     if (dealt) instance_destroy();
 }

@@ -1,9 +1,9 @@
 {
   "$GMScript":"v1",
-  "%Name":"script_input_rumble",
+  "%Name":"enemy_take_damage",
   "isCompatibility":false,
   "isDnD":false,
-  "name":"script_input_rumble",
+  "name":"enemy_take_damage",
   "parent":{
     "name":"Scripts",
     "path":"folders/Scripts.yy",

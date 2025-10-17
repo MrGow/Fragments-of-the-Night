@@ -1,22 +1,18 @@
 {
   "$GMObject":"",
-  "%Name":"oSunPilgrim",
+  "%Name":"oParEnemy",
   "eventList":[
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":0,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
-    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":3,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":7,"eventType":7,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
   ],
   "managed":true,
-  "name":"oSunPilgrim",
+  "name":"oParEnemy",
   "overriddenProperties":[],
   "parent":{
-    "name":"oEnemies",
-    "path":"folders/Objects/oEnemies.yy",
+    "name":"Objects",
+    "path":"folders/Objects.yy",
   },
-  "parentObjectId":{
-    "name":"oParEnemy",
-    "path":"objects/oParEnemy/oParEnemy.yy",
-  },
+  "parentObjectId":null,
   "persistent":false,
   "physicsAngularDamping":0.1,
   "physicsDensity":0.5,
@@ -34,13 +30,7 @@
   "resourceType":"GMObject",
   "resourceVersion":"2.0",
   "solid":false,
-  "spriteId":{
-    "name":"spriteSunPilgrimIdle",
-    "path":"sprites/spriteSunPilgrimIdle/spriteSunPilgrimIdle.yy",
-  },
-  "spriteMaskId":{
-    "name":"spriteSunPilgrimCollisionMask",
-    "path":"sprites/spriteSunPilgrimCollisionMask/spriteSunPilgrimCollisionMask.yy",
-  },
+  "spriteId":null,
+  "spriteMaskId":null,
   "visible":true,
 }
