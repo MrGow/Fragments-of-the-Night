@@ -1,5 +1,8 @@
 // ========================= oPlayer :: Create =========================
 
+// Ensure the global exists so later reads are safe.
+if (!variable_global_exists("tm_solids")) global.tm_solids = undefined;
+
 // --- State ---
 state = "idle";
 
@@ -7,13 +10,13 @@ state = "idle";
 hsp = 0;
 vsp = 0;
 move_speed = 2.6;         // horizontal speed (tune to taste)
-jump_speed = -8;        // initial jump velocity (up = negative)
+jump_speed = -8;          // initial jump velocity (up = negative)
 
 // --- Gravity & fall behaviour (variable jump uses these) ---
-gravity_amt        = 0.5; // base gravity applied each step
-max_fall           = 12;   // terminal velocity
-fall_multiplier    = 1.8;  // stronger pull when falling
-low_jump_multiplier= 3.2;  // extra pull if jump released early (short hop)
+gravity_amt         = 0.5; // base gravity applied each step
+max_fall            = 12;  // terminal velocity
+fall_multiplier     = 1.8; // stronger pull when falling
+low_jump_multiplier = 3.2; // extra pull if jump released early (short hop)
 
 // --- Coyote & buffer (in frames; scales with room_speed) ---
 coyote_time_frames      = round(0.12 * room_speed); // ~120 ms
@@ -28,10 +31,11 @@ attack_cooldown = 0;       // frames
 
 // --- Sprites / visuals ---
 sprite_index = spritePlayerIdle;
-mask_index   = spritePlayerCollisionMask; // <- semicolon was missing before
+mask_index   = spritePlayerCollisionMask;
 image_speed  = 0.4;
 image_xscale = 1;
 
 // Non-looping attack sprite/sequence
 spr_attack = spriteSwordAttack;
+
 

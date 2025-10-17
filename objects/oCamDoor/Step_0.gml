@@ -2,10 +2,10 @@
 if (activate_in > 0) activate_in--;
 if (cooldown > 0)    cooldown--;
 
-var pl = instance_nearest(x, y, oPlayer); // or any way you reference the player
+var pl = instance_nearest(x, y, oPlayer);
 hovering = (pl != noone) && place_meeting(x, y, oPlayer);
 
-// Arm only AFTER the player is fully clear (prevents instant fire on first touch)
+// Arm only AFTER the player is fully clear
 if (!hovering && cooldown <= 0 && activate_in <= 0) armed = true;
 
 // Count Up-hold frames only when overlapping AND armed

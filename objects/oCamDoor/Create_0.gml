@@ -1,21 +1,21 @@
 /// oCamDoor - Create
 
-// Per-instance settings (set in Variables if you like)
-if (!variable_instance_exists(id,"mode"))       mode = "mirror"; // this door is a mirror
-if (!variable_instance_exists(id,"hub_room"))   hub_room = SaveRoom; // Room-typed
-if (!variable_instance_exists(id,"use_fade"))   use_fade = true;
-if (!variable_instance_exists(id,"freeze_player")) freeze_player = true;
-if (!variable_instance_exists(id,"prompt_text"))   prompt_text = "Press \u2191 to enter";
+// Per-instance settings (or set in Variables panel)
+if (!variable_instance_exists(id,"mode"))           mode = "mirror";
+if (!variable_instance_exists(id,"hub_room"))       hub_room = SaveRoom;
+if (!variable_instance_exists(id,"use_fade"))       use_fade = true;
+if (!variable_instance_exists(id,"freeze_player"))  freeze_player = true;
+if (!variable_instance_exists(id,"prompt_text"))    prompt_text = "Press \u2191 to enter";
 
 // Runtime
-activate_in  = 10;     // frames before the door can arm
-cooldown_max = 12;     // small guard after use
-cooldown     = 0;
+activate_in   = 10;
+cooldown_max  = 12;
+cooldown      = 0;
 
-armed        = false;  // becomes true once player fully leaves the door
-hovering     = false;
+armed         = false;
+hovering      = false;
 
-interact_need = 3;     // frames you must hold Up while overlapping
+interact_need = 3;
 interact_cnt  = 0;
 
 // Input helper (pressed OR held; keyboard + pad)
@@ -30,9 +30,9 @@ up_pressed = function() {
 
 // Do the transition (called from Step when conditions are met)
 do_mirror_transition = function(pl) {
-    // Where to return (room-typed) + where to land back in source room
+    // Remember where to return to, and the spawn we want when we come back
     global.return_room     = room;
-    global.return_spawn_id = "mirror_exit_back";  // put an oSpawn with this tag near the mirror (offset a few px)
+    global.return_spawn_id = "mirror_exit_back"; // put an oSpawn with this tag near the mirror
 
     // Where to land in SaveRoom
     global.spawn_tag_next  = "mirror_entry";
@@ -40,14 +40,19 @@ do_mirror_transition = function(pl) {
     // Optional: lock input briefly
     if (freeze_player && pl != noone) {
         with (pl) {
-            if (!variable_instance_exists(id,"input_locked")) input_locked = false;
-            input_locked = true; alarm[0] = 12;
+            input_locked = true;
+            hsp = 0; vsp = 0;
+            alarm[0] = 12; // ~0.2s at 60fps
         }
     }
 
-    // Ensure fade exists, then start fade → hub_room
+    // Find a safe instance layer for fade
+    var _layer = layer_get_id("Actors");
+    if (_layer == -1) _layer = layer_get_id("FX");
+    if (_layer == -1) _layer = layer_create(0, "Actors");
+
     var f = instance_exists(oFade) ? instance_find(oFade, 0)
-                                   : instance_create_layer(0, 0, "Instances", oFade);
+                                   : instance_create_layer(0, 0, _layer, oFade);
 
     with (f) {
         target_room    = other.hub_room;  // ROOM asset
@@ -60,3 +65,4 @@ do_mirror_transition = function(pl) {
     cooldown = cooldown_max;
     interact_cnt = 0;
 };
+

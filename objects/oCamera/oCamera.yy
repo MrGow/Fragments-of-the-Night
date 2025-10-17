@@ -6,13 +6,14 @@
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":0,"eventType":3,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":2,"eventType":3,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
     {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":4,"eventType":7,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
+    {"$GMEvent":"v1","%Name":"","collisionObjectId":null,"eventNum":1,"eventType":3,"isDnD":false,"name":"","resourceType":"GMEvent","resourceVersion":"2.0",},
   ],
   "managed":true,
   "name":"oCamera",
   "overriddenProperties":[],
   "parent":{
-    "name":"CameraObjects",
-    "path":"folders/Objects/CameraObjects.yy",
+    "name":"ControllerObjects",
+    "path":"folders/Objects/ControllerObjects.yy",
   },
   "parentObjectId":null,
   "persistent":true,
@@ -37,5 +38,5 @@
     "path":"sprites/Camera/Camera.yy",
   },
   "spriteMaskId":null,
-  "visible":false,
+  "visible":true,
 }

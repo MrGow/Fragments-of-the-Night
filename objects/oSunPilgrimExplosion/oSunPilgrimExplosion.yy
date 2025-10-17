@@ -1,13 +1,13 @@
 {
   "$GMObject":"",
-  "%Name":"oSolid",
+  "%Name":"oSunPilgrimExplosion",
   "eventList":[],
   "managed":true,
-  "name":"oSolid",
+  "name":"oSunPilgrimExplosion",
   "overriddenProperties":[],
   "parent":{
-    "name":"Objects",
-    "path":"folders/Objects.yy",
+    "name":"oEnemies",
+    "path":"folders/Objects/oEnemies.yy",
   },
   "parentObjectId":null,
   "persistent":false,
@@ -27,10 +27,7 @@
   "resourceType":"GMObject",
   "resourceVersion":"2.0",
   "solid":false,
-  "spriteId":{
-    "name":"sWall",
-    "path":"sprites/sWall/sWall.yy",
-  },
+  "spriteId":null,
   "spriteMaskId":null,
   "visible":true,
 }

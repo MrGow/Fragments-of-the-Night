@@ -11,8 +11,8 @@
   "name":"oFade",
   "overriddenProperties":[],
   "parent":{
-    "name":"CameraObjects",
-    "path":"folders/Objects/CameraObjects.yy",
+    "name":"ControllerObjects",
+    "path":"folders/Objects/ControllerObjects.yy",
   },
   "parentObjectId":null,
   "persistent":true,
