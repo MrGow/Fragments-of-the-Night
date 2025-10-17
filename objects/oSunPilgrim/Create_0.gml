@@ -1,3 +1,14 @@
+/// oSunPilgrim — Create (death config first)
+if (!variable_instance_exists(id,"hp")) hp = 4;
+
+is_dead           = false;                       // parent/DMG script reads this
+death_sprite      = spriteSunPilgrimDeath;      // object asset already in your project
+death_image_speed = 0.25;
+explosion_object  = oSunPilgrimExplosion;       // object asset
+
+// ... keep your existing AI/init after this ...
+
+
 death_sprite     = spriteSunPilgrimDeath;
 explosion_object = oSunPilgrimExplosion; // object ASSET, not an instance
 hp               = 4;

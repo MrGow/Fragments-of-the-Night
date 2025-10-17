@@ -1,3 +1,18 @@
+/// oSunPilgrim — Step (early-out when dead)
+if (variable_instance_exists(id,"is_dead") && is_dead) {
+    // freeze AI and keep the death animation visible until Animation End
+    if (death_sprite != -1) {
+        if (sprite_index != death_sprite) {
+            sprite_index = death_sprite;
+            image_index  = 0; // ensure it starts from frame 0 the first frame of death
+        }
+        image_speed = death_image_speed;
+    }
+    hsp = 0; vsp = 0; // stop movement if you use these
+    exit;             // IMPORTANT: do not run patrol/chase/attack code below
+}
+
+
 /// oSunPilgrim — Step (facing-correct; no moonwalk)
 if (attack_cd > 0) attack_cd -= delta_time/1000000;
 

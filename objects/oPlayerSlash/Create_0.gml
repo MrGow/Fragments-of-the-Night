@@ -1,20 +1,19 @@
-/// oPlayerSlash — Create (rect-list based, no sprite needed)
+/// oPlayerSlash — Create (sprite-free rect hitbox)
 owner          = noone;    // set by spawner
-direction_sign = 1;        // +1 right, -1 left (set by spawner)
-damage         = 1;        // MUST be a real number
+direction_sign = 1;        // +1 right, -1 left
+damage         = 1;        // MUST be real
 life_frames    = 6;
-forward_px     = 10;
+forward_px     = 18;
 
-// Rect size (tune to your swing)
+// Rectangle size (tune if needed)
 hit_w = 64;
 hit_h = 24;
 
-// Resolve enemy parent asset
+// Resolve enemy parent asset (supports either naming)
 enemy_parent = noone;
 if (object_exists(oParEnemy)) enemy_parent = oParEnemy;
 else if (object_exists(parEnemy)) enemy_parent = parEnemy;
 
-// Debug flags
-debug_draw     = false;     // turn on to see the box
-debug_logging  = true;      // prints hit count to Output
-
+// Debug toggles
+debug_draw    = false; // set true to see the red box
+debug_logging = true;  // prints hit count
