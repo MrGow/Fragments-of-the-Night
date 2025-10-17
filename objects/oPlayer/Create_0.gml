@@ -38,4 +38,10 @@ image_xscale = 1;
 // Non-looping attack sprite/sequence
 spr_attack = spriteSwordAttack;
 
+var combat = instance_create_layer(x, y, layer, oPlayerCombat);
+combat.owner = id;
+// Declare the attack sprite if not already:
+spriteAttack = spriteSwordAttack; // <-- your attack sheet
+
+
 
