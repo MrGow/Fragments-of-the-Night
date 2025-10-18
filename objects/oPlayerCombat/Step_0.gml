@@ -1,35 +1,32 @@
-/// oPlayerCombat — Step (clean + oInput-aware)
-var dt = delta_time/1000000;
+/// oPlayerCombat — Step (clean + oInput-aware, anim speed = 1)
+var dt = delta_time / 1000000;
 
-// Resolve owner
+// --- Resolve owner and follow ---
 if (!instance_exists(owner)) {
     if (instance_exists(oPlayer)) owner = instance_nearest(x, y, oPlayer); else exit;
 }
-x = owner.x; 
+x = owner.x;
 y = owner.y;
 
-// Cooldown
+// --- Cooldown ---
 if (attack_cd > 0) attack_cd -= dt;
-    
-// Gate by global lock (set by door/fade); still allows your keyboard fallback
+
+// --- Gate by global lock (door/fade/pause) ---
 var inputs_blocked = (!is_undefined(global.input)) &&
                      (!global.input.input_enabled || global.input.player_locked || global.input.ui_captured);
 
-// --- READ INPUT (single source of truth) ---
+// --- Read input (prefer oInput pulse; fallback to keyboard) ---
 var pressed = false;
-
-// Prefer oInput (one-frame pulse set in Begin Step, cleared in End Step)
-if (object_exists(oInput) && instance_number(oInput) > 0){
-    pressed = global.input.attack_pressed;
+if (object_exists(oInput) && instance_number(oInput) > 0) {
+    pressed = global.input.attack_pressed; // one-frame pulse
 } else {
-    // Fallback if oInput isn't present yet
     pressed = keyboard_check_pressed(ord("Z")) || keyboard_check_pressed(ord("X"));
 }
 
-// --- SPAWN SLASH ---
+// --- Spawn slash ---
 if (!inputs_blocked && pressed && attack_cd <= 0) {
- {
-    // Optional: play attack sprite if available
+
+    // Play attack animation at fixed speed = 1
     var use_attack_sprite = spr_attack;
     if (use_attack_sprite == -1 && variable_instance_exists(owner, "spriteAttack")) {
         use_attack_sprite = owner.spriteAttack;
@@ -38,12 +35,12 @@ if (!inputs_blocked && pressed && attack_cd <= 0) {
         with (owner) {
             sprite_index = use_attack_sprite;
             image_index  = 0;
-            image_speed  = other.attack_anim_speed;
+            image_speed  = 1.0; // <-- locked animation speed
         }
     }
 
     // Facing
-    var forward = sign(owner.image_xscale); 
+    var forward = sign(owner.image_xscale);
     if (forward == 0) forward = 1;
 
     // Spawn hitbox (AABB oPlayerSlash)
@@ -55,9 +52,4 @@ if (!inputs_blocked && pressed && attack_cd <= 0) {
     show_debug_message("[Combat] Slash spawned; dmg=" + string(hb.damage));
 
     attack_cd = attack_cd_s;
-}
-
-
-
-
 }

@@ -1,28 +1,29 @@
 /// oInput — Create
-// Persistent input manager
+// Persistent singleton
 persistent = true;
+if (instance_number(oInput) > 1) { instance_destroy(); exit; }
 
-// Track a connected gamepad (if any)
+// Gamepad tracking
 pad_id = -1;
-for (var i = 0; i < 4; i++) if (gamepad_is_connected(i)) { pad_id = i; break; }
+for (var i = 0; i < 8; i++) if (gamepad_is_connected(i)) { pad_id = i; break; }
 
-// Public API (one place for the rest of the game to read)
+// Public API (global gates included)
 global.input = {
-    move_x: 0,                // -1 left, +1 right (digital-ized with deadzone)
-    jump_pressed: false,      // fires ONCE on the press frame
-    jump_down: false,         // held state
-    attack_pressed: false,    // fires ONCE on the press frame
-    attack_down: false,       // held state
+    move_x: 0,                // -1 .. +1
+    jump_down: false,
+    jump_pressed: false,      // one-frame pulse
+    attack_down: false,
+    attack_pressed: false,    // one-frame pulse
 
-    // Gating flags (set these from menus, pause screens, cutscenes, etc.)
-    input_enabled: true,      // master enable/disable
-    ui_captured:  false,      // true when a UI is consuming input
-    player_locked: false      // true while player-control is intentionally locked
+    // Global gates (portal/fade toggles these)
+    input_enabled: true,
+    ui_captured:  false,
+    player_locked: false
 };
 
-// Internal prev-frame latches for edge detection
-_jump_down_prev   = false;
-_attack_down_prev = false;
+// Internal prev-state for edge detection
+_jump_prev   = false;
+_attack_prev = false;
 
 // Tunables
-deadzone = 0.25;   // analog stick deadzone
+deadzone = 0.25;

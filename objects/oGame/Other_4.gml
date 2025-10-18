@@ -49,3 +49,23 @@ if (sp != noone) {
         }
     }
 }
+
+/// oGame — Room Start  (APPEND after your spawn code)
+
+// Normalize timing for this room (removes any post-portal slow/fast effects)
+room_speed = 60; // <-- set your intended FPS here
+
+// Always unlock gameplay input on arrival
+if (!is_undefined(global.input)) {
+    global.input.input_enabled = true;
+    global.input.player_locked = false;
+    global.input.ui_captured   = false;
+
+    // Clear one-frame pulses on first frame in the room
+    global.input.jump_pressed   = false;
+    global.input.attack_pressed = false;
+}
+
+// Clear any legacy per-instance locks/cooldowns that might block the first swing
+with (oPlayer)       if (variable_instance_exists(id,"input_locked")) input_locked = false;
+with (oPlayerCombat) if (variable_instance_exists(id,"attack_cd"))    attack_cd    = 0;

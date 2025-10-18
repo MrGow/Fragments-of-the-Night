@@ -1,36 +1,31 @@
 /// enemy_take_damage(target, amount, from_x)
-if (!instance_exists(argument0)) exit;
+function enemy_take_damage(target, amount, from_x) {
+    if (!instance_exists(target)) return;
 
-var _t   = argument0;
-var _amt = max(1, argument1);
-var _fx  = argument2;
+    var _t   = target;
+    var _amt = max(1, amount);
+    var _fx  = from_x;
 
-with (_t) {
-    if (!variable_instance_exists(id,"hp"))      hp = 1;
-    if (!variable_instance_exists(id,"is_dead")) is_dead = false;
-    if (is_dead) exit;
+    with (_t) {
+        if (!variable_instance_exists(id,"hp"))      hp = 1;
+        if (!variable_instance_exists(id,"is_dead")) is_dead = false;
+        if (is_dead) return;
 
-    var _hp_prev = hp;
-    hp -= _amt;
+        hp = max(-9999, hp - _amt);
 
-    show_debug_message("[DMG] " + object_get_name(object_index) + " HP " + string(_hp_prev) + " -> " + string(hp));
-
-    if (hp <= 0) {
-        is_dead = true;
-
-        if (variable_instance_exists(id,"death_sprite") && death_sprite != -1) {
-            sprite_index = death_sprite;
-            image_index  = 0;
-            image_speed  = (variable_instance_exists(id,"death_image_speed") ? death_image_speed : 0.25);
-        } else {
-            if (variable_instance_exists(id,"explosion_object")
-            && explosion_object != noone && object_exists(explosion_object)) {
-                instance_create_layer(x, y, layer, explosion_object);
+        if (hp <= 0) {
+            is_dead = true;
+            if (variable_instance_exists(id,"death_sprite") && death_sprite != -1) {
+                sprite_index = death_sprite;
+                image_index  = 0;
+                image_speed  = (variable_instance_exists(id,"death_image_speed") ? death_image_speed : 0.25);
+            } else {
+                if (variable_instance_exists(id,"explosion_object") && explosion_object != -1) {
+                    instance_create_layer(x, y, layer, explosion_object);
+                }
+                instance_destroy();
             }
-            instance_destroy();
         }
     }
 }
-
-
 

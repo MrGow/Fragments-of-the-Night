@@ -2,7 +2,7 @@
 // Keep pad_id valid / reconnect if needed
 if (pad_id != -1 && !gamepad_is_connected(pad_id)) pad_id = -1;
 if (pad_id == -1) {
-    for (var i = 0; i < 4; i++) if (gamepad_is_connected(i)) { pad_id = i; break; }
+    for (var i = 0; i < 8; i++) if (gamepad_is_connected(i)) { pad_id = i; break; }
 }
 
 // -------- Keyboard --------
@@ -13,51 +13,48 @@ kx = clamp(kx, -1, 1);
 var k_jump_down = keyboard_check(vk_space) || keyboard_check(ord("Z"));
 var k_atk_down  = keyboard_check(ord("X")) || mouse_check_button(mb_left);
 
-// Rising edges
+// Optional direct pressed (not required because we do edge detection via prev)
 var k_jump_pressed = keyboard_check_pressed(vk_space) || keyboard_check_pressed(ord("Z"));
 var k_atk_pressed  = keyboard_check_pressed(ord("X")) || mouse_check_button_pressed(mb_left);
 
-// -------- Gamepad (if present) --------
+// -------- Gamepad --------
 var gx = 0, g_jump_down = false, g_atk_down = false, g_jump_pressed = false, g_atk_pressed = false;
 if (pad_id != -1) {
     var ax = gamepad_axis_value(pad_id, gp_axislh);
     if (abs(ax) > deadzone) gx = sign(ax);
-
-    // allow d-pad to override axis
     gx = clamp(gx + (gamepad_button_check(pad_id, gp_padr) - gamepad_button_check(pad_id, gp_padl)), -1, 1);
 
-    g_jump_down   = gamepad_button_check(pad_id, gp_face1);             // A / Cross
-    g_atk_down    = gamepad_button_check(pad_id, gp_face2);             // B / Circle
-    g_jump_pressed= gamepad_button_check_pressed(pad_id, gp_face1);
-    g_atk_pressed = gamepad_button_check_pressed(pad_id, gp_face2);
+    g_jump_down    = gamepad_button_check(pad_id, gp_face1);             // A/Cross
+    g_atk_down     = gamepad_button_check(pad_id, gp_face2);             // B/Circle
+    g_jump_pressed = gamepad_button_check_pressed(pad_id, gp_face1);
+    g_atk_pressed  = gamepad_button_check_pressed(pad_id, gp_face2);
 }
 
 // -------- Merge (keyboard wins if active) --------
-var mx            = (kx != 0) ? kx : gx;
+var mx          = (kx != 0) ? kx : gx;
+var down_jump   = k_jump_down || g_jump_down;
+var down_attack = k_atk_down  || g_atk_down;
 
-var down_jump     = k_jump_down || g_jump_down;
-var down_attack   = k_atk_down  || g_atk_down;
+// Edge detect (pressed = down this frame and NOT down last frame OR native _pressed)
+var pressed_jump   = (k_jump_pressed || g_jump_pressed) || ( down_jump   && !_jump_prev   );
+var pressed_attack = (k_atk_pressed  || g_atk_pressed ) || ( down_attack && !_attack_prev );
 
-// Edge detection (pressed == down this frame AND was NOT down last frame)
-var pressed_jump   = (k_jump_pressed || g_jump_pressed) || ( down_jump  && !_jump_down_prev );
-var pressed_attack = (k_atk_pressed  || g_atk_pressed ) || ( down_attack&& !_attack_down_prev );
-
-// -------- Apply locks/gates --------
-var gated = !(global.input.input_enabled) || global.input.ui_captured || global.input.player_locked;
+// -------- Apply global gates (from portal/fade/UI) --------
+var gated = (!global.input.input_enabled) || global.input.ui_captured || global.input.player_locked;
 if (gated) {
     mx = 0;
     down_jump = false; down_attack = false;
     pressed_jump = false; pressed_attack = false;
 }
 
-// -------- Publish to global --------
+// -------- Publish --------
 global.input.move_x        = mx;
 global.input.jump_down     = down_jump;
 global.input.attack_down   = down_attack;
 global.input.jump_pressed  = pressed_jump;
 global.input.attack_pressed= pressed_attack;
 
-// -------- Latch current "down" for next frame's edge detection --------
-_jump_down_prev   = down_jump;
-_attack_down_prev = down_attack;
+// -------- Latch for next frame --------
+_jump_prev   = down_jump;
+_attack_prev = down_attack;
 
