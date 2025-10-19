@@ -1,9 +1,10 @@
+/// oPlayer — Room Start  (assign only; no new declarations)
 
+// Reset control flags on entry
+stunned  = false;
+can_move = true;
 
-// (Optional) if you keep any player-specific temporary states that should reset per room,
-// do it here, e.g.:
-if (variable_instance_exists(id, "stunned")) stunned = false;
-if (variable_instance_exists(id, "can_move")) can_move = true;
+// (Optional) Ensure any per-instance legacy locks are cleared
+if (variable_instance_exists(id,"input_locked")) input_locked = false;
 
-// Nothing else needed. Spawning and input are handled centrally by oGame.
 

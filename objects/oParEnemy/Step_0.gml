@@ -1,21 +1,21 @@
-/// oParEnemy — Step (central death + i-frame tick)
+/// oParEnemy — Step  (central death + i-frame tick)
 
-// Defensive defaults (if a child skipped Create somehow)
+// Defensive defaults in case a child skipped Create (rare but safe)
 if (!variable_instance_exists(id,"hp"))                hp = 3;
 if (!variable_instance_exists(id,"is_dead"))           is_dead = false;
 if (!variable_instance_exists(id,"death_sprite"))      death_sprite = -1;
 if (!variable_instance_exists(id,"death_image_speed")) death_image_speed = 0.25;
-/* @type {asset.object} */
 if (!variable_instance_exists(id,"explosion_object"))  explosion_object = -1;
 if (!variable_instance_exists(id,"invul_frames"))      invul_frames = 0;
+if (!variable_instance_exists(id,"invincible"))        invincible = false;
+if (!variable_instance_exists(id,"hurtbox_active"))    hurtbox_active = true;
 
-// Tick invulnerability every step (prevents getting stuck across rooms)
+// Tick invulnerability every step
 if (invul_frames > 0) {
     invul_frames--;
-    // Optional blink while invulnerable
-    image_alpha = (invul_frames % 2 == 0) ? 0.6 : 1;
+    image_alpha = (invul_frames % 2 == 0) ? 0.6 : 1.0;
 } else {
-    image_alpha = 1;
+    image_alpha = 1.0;
 }
 
 // Force death if hp <= 0 and not yet marked dead
@@ -34,7 +34,7 @@ if (!is_dead && hp <= 0) {
     }
 }
 
-// While dead, play death anim and exit so child AI can’t overwrite it
+// While dead, keep death anim and exit so child AI can’t overwrite it
 if (is_dead) {
     if (death_sprite != -1) {
         if (sprite_index != death_sprite) { sprite_index = death_sprite; image_index = 0; }

@@ -1,74 +1,110 @@
-/// oGame — Room Start (lean, no pending-unlock)
+/// oGame — Room Start  (normalize timing; safe spawn to ground; enemy sanity)
 
-// Helpers
+game_set_speed(60, gamespeed_fps);   // replaces deprecated room_speed
+
+// ---- Reacquire Solids tilemap for this room ----
+var _lid = layer_get_id("Solids");
+if (_lid == -1) {
+    // fallback: first tilemap found
+    var _layers = layer_get_all();
+    for (var i = 0; i < array_length(_layers); i++) {
+        var _tm = layer_tilemap_get_id(_layers[i]);
+        if (_tm != -1) { _lid = _layers[i]; break; }
+    }
+}
+global.tm_solids = (_lid != -1) ? layer_tilemap_get_id(_lid) : undefined;
+
+// ---- Spawn helpers ----
+function _tile_solid_at(_x, _y) {
+    return (!is_undefined(global.tm_solids)) && (tilemap_get_at_pixel(global.tm_solids, _x, _y) != 0);
+}
+
+function _rect_inside_solid(_inst, _dx, _dy) {
+    var l = _inst.bbox_left   + _dx;
+    var r = _inst.bbox_right  + _dx;
+    var t = _inst.bbox_top    + _dy;
+    var b = _inst.bbox_bottom + _dy;
+    var eps = 0.1;
+    return  _tile_solid_at(l+eps, t+eps) || _tile_solid_at(r-eps, t+eps)
+         || _tile_solid_at(l+eps, b-eps) || _tile_solid_at(r-eps, b-eps);
+}
+
+/// Return a safe (x,y) near the target spawn:
+/// 1) if starting inside, move up to 128px upwards until free
+/// 2) then drop up to _max_down pixels until the tile below is solid
+function _snap_to_ground(_inst, _x, _y, _max_down) {
+    var xx = _x, yy = _y;
+
+    // 1) Escape if spawned inside solid
+    var up_tries = 0;
+    while (_rect_inside_solid(_inst, xx - _inst.x, yy - _inst.y) && up_tries < 128) {
+        yy -= 1; up_tries++;
+    }
+
+    // 2) Drop until there is solid directly beneath
+    var down_tries = 0;
+    while (down_tries < _max_down) {
+        var l = _inst.bbox_left  + (xx - _inst.x);
+        var r = _inst.bbox_right + (xx - _inst.x);
+        var b = _inst.bbox_bottom+ (yy - _inst.y);
+        var eps = 0.1;
+        if (_tile_solid_at(l+eps, b+1) || _tile_solid_at(r-eps, b+1)) break;
+        yy += 1; down_tries++;
+    }
+
+    return [xx, yy];
+}
+
 function _find_spawn(_tag) {
     with (oSpawn) if (spawn_id == _tag) return id;
     return noone;
 }
-function _snap_to_ground(_x, _y, _max_down) {
-    if (!variable_global_exists("tm_solids") || is_undefined(global.tm_solids)) return [_x, _y];
-    var xx = _x, yy = _y;
-    for (var i = 0; i < 32; i++) { if (tilemap_get_at_pixel(global.tm_solids, xx, yy) == 0) break; yy -= 1; }
-    for (var j = 0; j < _max_down; j++) { if (tilemap_get_at_pixel(global.tm_solids, xx, yy + 1) != 0) break; yy += 1; }
-    return [xx, yy];
-}
 
-// Solids tilemap
-var _lid = layer_get_id("Solids");
-global.tm_solids = (_lid != -1) ? layer_tilemap_get_id(_lid) : undefined;
-
-// Spawn tag
-var _tag = "default";
+// ---- Decide which spawn tag to use ----
+var tag = "default";
 if (variable_global_exists("spawn_tag_next") && !is_undefined(global.spawn_tag_next)) {
-    _tag = global.spawn_tag_next; global.spawn_tag_next = undefined;
+    tag = global.spawn_tag_next;
+    global.spawn_tag_next = undefined; // consume it
 }
 
-// Move player to spawn
-var _sp = _find_spawn(_tag);
-if (_sp != noone) {
-    var _pl = instance_exists(oPlayer) ? instance_find(oPlayer, 0) : noone;
-    if (_pl != noone) {
-        var _pos = _snap_to_ground(_sp.x, _sp.y, 64);
-        with (_pl) {
-            x = _pos[0]; y = _pos[1];
-            if (variable_instance_exists(id,"hsp")) hsp = 0;
-            if (variable_instance_exists(id,"vsp")) vsp = 0;
+// ---- Move existing player to spawn (snap to ground) ----
+var sp = _find_spawn(tag);
+if (sp != noone) {
+    var pl = instance_exists(oPlayer) ? instance_find(oPlayer, 0) : noone;
+    if (pl != noone) {
+        var pos = _snap_to_ground(pl, sp.x, sp.y, 96);
+        with (pl) {
+            x = pos[0];
+            y = pos[1];
+            hsp = 0; vsp = 0;
             if (variable_instance_exists(id,"input_locked")) input_locked = false;
         }
     }
 }
 
-// Normalize timing
-room_speed = 60;
-
-// Baseline input (kept harmless)
+// ---- Always unlock gameplay input on arrival ----
 if (!is_undefined(global.input)) {
     global.input.input_enabled  = true;
-    global.input.ui_captured    = false;
     global.input.player_locked  = false;
+    global.input.ui_captured    = false;
     global.input.jump_pressed   = false;
     global.input.attack_pressed = false;
 }
 
-// Reset oInput edges
-if (object_exists(oInput) && instance_number(oInput) > 0) {
-    with (oInput) { _jump_prev = false; _attack_prev = false; }
+// ---- Enemy sanity so hits always land even if a Create was skipped ----
+with (oParEnemy) {
+    if (!variable_instance_exists(id,"hp"))           hp = 3;
+    if (!variable_instance_exists(id,"is_dead"))      is_dead = false;
+    if (!variable_instance_exists(id,"invul_frames")) invul_frames = 0;
+    invincible      = false;
+    hurtbox_active  = true;
+    image_alpha     = 1.0;
 }
-
-// Clear any leftover cooldown on player combat
-with (oPlayerCombat) if (variable_instance_exists(id,"attack_cd")) attack_cd = 0;
-
-// Enemy sanity (starts enemies hittable on entry)
-with (all) if (object_is_ancestor(oParEnemy, object_index)) {
-    if (!variable_instance_exists(id,"hp"))                hp = 3;
-    if (!variable_instance_exists(id,"is_dead"))           is_dead = false;
-    if (!variable_instance_exists(id,"death_sprite"))      death_sprite = -1;
-    if (!variable_instance_exists(id,"death_image_speed")) death_image_speed = 0.25;
-    if (!variable_instance_exists(id,"explosion_object"))  explosion_object = -1;
-    if (!variable_instance_exists(id,"invul_frames"))      invul_frames = 0;
-
-    invul_frames = 0;
-    if (variable_instance_exists(id,"invincible"))     invincible = false;
-    if (variable_instance_exists(id,"hurtbox_active")) hurtbox_active = true;
-    if (is_dead && hp > 0) is_dead = false;
+with (oSunPilgrim) {
+    if (!variable_instance_exists(id,"hp"))           hp = 4;
+    if (!variable_instance_exists(id,"is_dead"))      is_dead = false;
+    if (!variable_instance_exists(id,"invul_frames")) invul_frames = 0;
+}
+if (!is_undefined(global.input)) {
+    show_debug_message("[GATE] enabled=" + string(global.input.input_enabled) + " locked=" + string(global.input.player_locked) + " ui=" + string(global.input.ui_captured));
 }

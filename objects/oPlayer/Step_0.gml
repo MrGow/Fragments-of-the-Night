@@ -1,14 +1,11 @@
 // ========================= oPlayer :: Step =========================
-//
 // Tilemap collisions + keyboard-first input merge
-// Requires: global.tm_solids set in Room Start (oGame), but will lazy-init safely.
 
 // ---- Safe initializer for global.tm_solids (no reads before it exists)
 if (!variable_global_exists("tm_solids")) global.tm_solids = undefined;
 
 function __ensure_tm_solids() {
     if (is_undefined(global.tm_solids)) {
-        // If you use a macro, swap "Solids" for L_SOLIDS
         var _lid = layer_get_id("Solids");
         if (_lid != -1) global.tm_solids = layer_tilemap_get_id(_lid);
     }
@@ -45,16 +42,16 @@ function __on_ground_check() {
     return __tile_solid_at(l + eps, b + 1) || __tile_solid_at(r - eps, b + 1);
 }
 
-// -------- INPUT (keyboard always wins; struct merged if present) --------
+// -------- INPUT (keyboard wins; struct ORs on top) --------
 var kx = (keyboard_check(vk_right) || keyboard_check(ord("D")))
        - (keyboard_check(vk_left)  || keyboard_check(ord("A")));
 kx = clamp(kx, -1, 1);
 
-var k_jump_p = keyboard_check_pressed(vk_space)
-            || keyboard_check_pressed(ord("Z"));
-var k_jump_h = keyboard_check(vk_space)
-            || keyboard_check(ord("Z"));
-var k_atk_p  = keyboard_check_pressed(ord("X"))
+// JUMP = Space; ATTACK = Z (also accept X/mouse)
+var k_jump_p = keyboard_check_pressed(vk_space);
+var k_jump_h = keyboard_check(vk_space);
+var k_atk_p  = keyboard_check_pressed(ord("Z"))
+            || keyboard_check_pressed(ord("X"))
             || mouse_check_button_pressed(mb_left);
 
 // Defaults from keyboard
@@ -71,8 +68,9 @@ if (variable_global_exists("input") && is_struct(global.input)) {
     if (variable_struct_exists(global.input, "jump_pressed"))
         jump_p = jump_p || global.input.jump_pressed;
 
-    if (variable_struct_exists(global.input, "jump_held"))
-        jump_h = jump_h || global.input.jump_held;
+    // oInput publishes jump_down (not jump_held)
+    if (variable_struct_exists(global.input, "jump_down"))
+        jump_h = jump_h || global.input.jump_down;
 
     if (variable_struct_exists(global.input, "attack_pressed"))
         atk_p = atk_p || global.input.attack_pressed;
@@ -85,50 +83,44 @@ if (attack_cooldown > 0) attack_cooldown--;
 var on_ground = __on_ground_check();
 
 // -------- COYOTE & JUMP BUFFER TIMERS ----------------------------
-// (Assumes these exist from Create)
 if (on_ground) coyote_timer = coyote_time_frames; else if (coyote_timer > 0) coyote_timer--;
 if (jump_p)    jump_buffer_timer = jump_buffer_time_frames; else if (jump_buffer_timer > 0) jump_buffer_timer--;
 
-// -------- ATTACK TRIGGER -----------------------------------------
+// -------- ATTACK TRIGGER (no freeze if no sprite) ----------------
 if (state != "attack" && can_attack && atk_p) {
-    state        = "attack";
-    sprite_index = spr_attack; // set in Create: spr_attack = spriteSwordAttack;
-    image_index  = 0;
-    image_speed  = 1;
-    attack_lock  = true;
-
-    // if (instance_exists(oInput)) with (oInput) scr_input_rumble(0.45, 0.45, 8);
+    if (spr_attack != -1) {
+        state        = "attack";
+        sprite_index = spr_attack;
+        image_index  = 0;
+        image_speed  = 1;
+        attack_lock  = true;               // lock only when anim will run
+    } else {
+        // No attack sprite available — optionally enable a tiny frame-lock:
+        // attack_lock_frames = 4;         // ~4 frames of movement lock
+    }
 }
 
 // -------- HORIZONTAL MOVEMENT ------------------------------------
 var hsp_target = move_speed * move_x;
-if (state == "attack" || attack_lock) hsp_target = 0;
-hsp = hsp_target; // If you prefer acceleration, lerp toward hsp_target instead
+if (state == "attack" || attack_lock || attack_lock_frames > 0) hsp_target = 0;
+hsp = hsp_target; // (replace with acceleration if desired)
 
 // -------- EXECUTE JUMP (buffer + coyote) --------------------------
 if (state != "attack" && jump_buffer_timer > 0 && coyote_timer > 0) {
     vsp = jump_speed;               // up is negative
     jump_buffer_timer = 0;
     coyote_timer      = 0;
-
-    // optional one-time state/anim on takeoff:
-    // state = "jump"; sprite_index = spritePlayerJump; image_speed = 0.3;
 }
 
 // -------- VARIABLE GRAVITY ---------------------------------------
 var g = gravity_amt;
-
 if (!on_ground) {
-    if (vsp < 0) {
-        // Rising
-        if (!jump_h) g += gravity_amt * (low_jump_multiplier - 1.0); // short hop if released early
-    } else {
-        // Falling snappier
+    if (vsp < 0) { // rising
+        if (!jump_h) g += gravity_amt * (low_jump_multiplier - 1.0); // short hop
+    } else { // falling
         g += gravity_amt * (fall_multiplier - 1.0);
     }
 }
-
-// Apply gravity and clamp
 vsp += g;
 if (vsp > max_fall) vsp = max_fall;
 
@@ -137,11 +129,9 @@ if (hsp != 0) {
     var sx = sign(hsp);
     var mx = abs(hsp);
 
-    // move pixel-by-pixel to avoid tunneling & infinite loops
     repeat (floor(mx)) {
         if (!__rect_hits_solid(sx, 0)) x += sx; else { hsp = 0; break; }
     }
-    // handle leftover fractional step safely
     var fracx = mx - floor(mx);
     if (fracx > 0 && hsp != 0) {
         if (!__rect_hits_solid(sx * fracx, 0)) x += sx * fracx; else hsp = 0;
@@ -154,10 +144,8 @@ if (vsp != 0) {
     var my = abs(vsp);
 
     repeat (floor(my)) {
-        if (!__rect_hits_solid(0, sy)) y += sy;
-        else { vsp = 0; break; }
+        if (!__rect_hits_solid(0, sy)) y += sy; else { vsp = 0; break; }
     }
-    // leftover fractional step
     var fracy = my - floor(my);
     if (fracy > 0 && vsp != 0) {
         if (!__rect_hits_solid(0, sy * fracy)) y += sy * fracy; else vsp = 0;
@@ -166,6 +154,12 @@ if (vsp != 0) {
 
 // -------- RECHECK GROUND (post-move) ------------------------------
 on_ground = __on_ground_check();
+
+// -------- OPTIONAL tiny frame-lock countdown ---------------------
+if (attack_lock_frames > 0) {
+    attack_lock_frames--;
+    if (attack_lock_frames <= 0) attack_lock_frames = 0;
+}
 
 // -------- FACING -------------------------------------------------
 if (abs(move_x) > 0.001) image_xscale = (move_x > 0) ? 1 : -1;
@@ -194,4 +188,3 @@ if (state != "attack") {
 if (state == "attack" && image_index >= image_number - 1) {
     event_perform(ev_other, ev_animation_end);
 }
-

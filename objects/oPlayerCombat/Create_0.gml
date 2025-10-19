@@ -1,14 +1,18 @@
-/// oPlayerCombat — Create (sprite-agnostic spawner)
+/// oPlayerCombat — Create (robust; owns its own edge-detector)
 owner              = noone;          // oPlayer instance; auto-resolved if not set
-attack_key_primary = ord("Z");       // change if you like
-attack_key_alt     = -1;             // set to vk_space etc. if you want a 2nd key
-attack_cd_s        = 0.30;           // seconds
+
+// Cooldown (seconds)
+attack_cd_s        = 0.30;
 attack_cd          = 0;
 
-slash_forward_px   = 18;             // spawn offset in front of player
-slash_damage       = 1;              // REAL number
+// Slash settings
+slash_forward_px   = 18;
+slash_damage       = 1;
 
 // Optional attack sprite (not required)
 spr_attack = -1;
-var _maybe = asset_get_index("spriteSwordAttack"); if (_maybe != -1) spr_attack = _maybe;
-attack_anim_speed  = 1.5;
+var _maybe = asset_get_index("spriteSwordAttack");
+if (_maybe != -1) spr_attack = _maybe;
+
+// Local input edge detector (so we don't rely only on global pulses)
+attack_down_prev = false;  // <--- NEW

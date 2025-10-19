@@ -1,20 +1,24 @@
-/// oParEnemy — Create
-// Core stats
+
+
+/// oParEnemy — Create (add defaults that Animation End expects)
 hp                = 3;
 is_dead           = false;
 
-// Death visuals (child should set death_sprite)
-death_sprite      = -1;     // e.g., sprMyEnemyDeath
+death_sprite      = -1;
 death_image_speed = 0.25;
 
-// Optional extras (all default OFF / NONE)
-explosion_object  = -1;   // was: noone
- // e.g., oSunPilgrimExplosion (only for enemies that explode)
-death_sfx         = -1;     // e.g., sndEnemyDie
-death_particles   = -1;     // you can call a script in Animation End if wanted
-corpse_persist    = false;  // if true, we won’t auto-destroy in Animation End
+/* @type {asset.object} */
+explosion_object  = -1;   // use -1 for "none" here
 
-// Gameplay hooks
+death_sfx         = -1;
+death_particles   = -1;
+
+/* NEW: ensure this exists */
+corpse_persist    = false;
+
 contact_damage    = 0;
-knockback_px      = 5;      // nudge on hit, if your child uses hsp/vsp
-invul_frames      = 0;      // simple hit cooldown (set by damage script)
+knockback_px      = 5;
+invul_frames      = 0;
+
+invincible        = false;
+hurtbox_active    = true;

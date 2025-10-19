@@ -1,47 +1,52 @@
-// ========================= oPlayer :: Create =========================
+/// oPlayer — Create  (fully declared; Space=jump, Z/X=attack)
 
-// Ensure the global exists so later reads are safe.
-if (!variable_global_exists("tm_solids")) global.tm_solids = undefined;
+// Movement/control
+stunned                 = false;
+can_move                = true;
+hsp                     = 0;
+vsp                     = 0;
 
-// --- State ---
-state = "idle";
+// State / animation
+state                   = "idle";
+attack_lock             = false;
 
-// --- Movement (single system: hsp/vsp only) ---
-hsp = 0;
-vsp = 0;
-move_speed = 2.6;         // horizontal speed (tune to taste)
-jump_speed = -8;          // initial jump velocity (up = negative)
+// Optional attack sprite (auto-detect; stays -1 if not present)
+spr_attack = -1;
+var _maybe = asset_get_index("spriteSwordAttack");
+if (_maybe != -1) spr_attack = _maybe;
 
-// --- Gravity & fall behaviour (variable jump uses these) ---
-gravity_amt         = 0.5; // base gravity applied each step
-max_fall            = 12;  // terminal velocity
-fall_multiplier     = 1.8; // stronger pull when falling
-low_jump_multiplier = 3.2; // extra pull if jump released early (short hop)
+// Movement tuning (adjust to taste)
+move_speed              = 2.0;
+jump_speed              = -5.0;     // up is negative
+gravity_amt             = 0.35;
+low_jump_multiplier     = 1.7;
+fall_multiplier         = 1.5;
+max_fall                = 8.0;
 
-// --- Coyote & buffer (in frames; scales with room_speed) ---
-coyote_time_frames      = round(0.12 * room_speed); // ~120 ms
-jump_buffer_time_frames = round(0.12 * room_speed); // ~120 ms
-coyote_timer      = 0;
-jump_buffer_timer = 0;
+// Coyote / buffer (frames)
+coyote_time_frames      = 6;
+jump_buffer_time_frames = 6;
+coyote_timer            = 0;
+jump_buffer_timer       = 0;
 
-// --- Attack system ---
-attack_lock     = false;
-can_attack      = true;    // set false if you want cooldown to gate re-attacks
-attack_cooldown = 0;       // frames
+// Attack gating (Step reads these)
+can_attack              = true;
+attack_cooldown         = 0;
 
-// --- Sprites / visuals ---
-sprite_index = spritePlayerIdle;
-mask_index   = spritePlayerCollisionMask;
-image_speed  = 0.4;
-image_xscale = 1;
+// Tiny frame-lock support (only used if you enable it in Step)
+attack_lock_frames      = 0;
 
-// Non-looping attack sprite/sequence
-spr_attack = spriteSwordAttack;
+// Legacy flag some code touches
+if (!variable_instance_exists(id,"input_locked")) input_locked = false;
 
-var combat = instance_create_layer(x, y, layer, oPlayerCombat);
-combat.owner = id;
-// Declare the attack sprite if not already:
-spriteAttack = spriteSwordAttack; // <-- your attack sheet
-
-
-
+// --- Ensure a Combat companion exists and is bound to this player ---
+if (instance_number(oPlayerCombat) == 0) {
+    var _pc = instance_create_layer(x, y, layer, oPlayerCombat);
+    _pc.owner = id;
+    show_debug_message("[PC] Spawned oPlayerCombat and bound owner");
+} else {
+    // Bind nearest combat to this player, just in case
+    var _pc2 = instance_nearest(x, y, oPlayerCombat);
+    if (_pc2 != noone) { _pc2.owner = id; }
+    show_debug_message("[PC] Rebound existing oPlayerCombat to player");
+}
