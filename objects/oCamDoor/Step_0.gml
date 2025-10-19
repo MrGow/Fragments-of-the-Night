@@ -1,4 +1,4 @@
-/// oCamDoor - Step
+/// oCamDoor — Step
 if (activate_in > 0) activate_in--;
 if (cooldown > 0)    cooldown--;
 
@@ -11,7 +11,6 @@ if (!hovering && cooldown <= 0 && activate_in <= 0) armed = true;
 // Count Up-hold frames only when overlapping AND armed
 if (hovering && armed && mode == "mirror") {
     if (up_pressed()) interact_cnt++; else interact_cnt = 0;
-
     if (interact_cnt >= interact_need) {
         do_mirror_transition(pl);
     }

@@ -1,27 +1,9 @@
-/// oCamDoor - Create
-if (variable_instance_exists(id,"input_locked")) input_locked = false;
-
-// --- Global input lock helpers ---
-function _lock_input() {
-    if (!is_undefined(global.input)) {
-        global.input.input_enabled = false;
-        global.input.player_locked = true;
-        global.input.ui_captured   = true;
-    }
-}
-function _unlock_input() {
-    if (!is_undefined(global.input)) {
-        global.input.input_enabled = true;
-        global.input.player_locked = false;
-        global.input.ui_captured   = false;
-    }
-}
+/// oCamDoor — Create  (NO LOCKING)
 
 // Per-instance settings (or set in Variables panel)
 if (!variable_instance_exists(id,"mode"))           mode = "mirror";
 if (!variable_instance_exists(id,"hub_room"))       hub_room = SaveRoom;
 if (!variable_instance_exists(id,"use_fade"))       use_fade = true;
-if (!variable_instance_exists(id,"freeze_player"))  freeze_player = true;
 if (!variable_instance_exists(id,"prompt_text"))    prompt_text = "Press \u2191 to enter";
 
 // Runtime
@@ -49,30 +31,30 @@ up_pressed = function() {
 do_mirror_transition = function(pl) {
     // Remember where to return to, and the spawn we want when we come back
     global.return_room     = room;
-    global.return_spawn_id = "mirror_exit_back"; // put an oSpawn with this tag near the mirror
+    global.return_spawn_id = "mirror_exit_back"; // place an oSpawn with this tag near the mirror
 
     // Where to land in SaveRoom
     global.spawn_tag_next  = "mirror_entry";
 
-    // Lock input globally (survives room switch; we’ll unlock in the destination)
-if (freeze_player) {
-    _lock_input();
-}
-if (pl != noone) { with (pl) { hsp = 0; vsp = 0; } }
+    // Stop player velocity (nice to have, not required)
+    if (pl != noone) { with (pl) { if (variable_instance_exists(id,"hsp")) hsp = 0; if (variable_instance_exists(id,"vsp")) vsp = 0; } }
 
+    // Start transition (no locking)
+    var target = hub_room;
 
-    // Find a safe instance layer for fade
-    var _layer = layer_get_id("Actors");
-    if (_layer == -1) _layer = layer_get_id("FX");
-    if (_layer == -1) _layer = layer_create(0, "Actors");
-
-    var f = instance_exists(oFade) ? instance_find(oFade, 0)
-                                   : instance_create_layer(0, 0, _layer, oFade);
-
-    with (f) {
-        target_room    = other.hub_room;  // ROOM asset
-        pending_switch = true;
-        if (state == 0) { state = 1; transit_ttl = 12; }
+    if (use_fade && object_exists(oFade)) {
+        var _layer = layer_get_id("Actors");
+        if (_layer == -1) _layer = layer_get_id("FX");
+        if (_layer == -1) _layer = layer_create(0, "Actors");
+        var f = instance_exists(oFade) ? instance_find(oFade, 0)
+                                       : instance_create_layer(0, 0, _layer, oFade);
+        with (f) {
+            target_room    = target;
+            pending_switch = true;
+            if (state == 0) { state = 1; transit_ttl = 12; }
+        }
+    } else {
+        room_goto(target);
     }
 
     // Disarm & cooldown so it won’t retrigger while overlapping
@@ -80,4 +62,3 @@ if (pl != noone) { with (pl) { hsp = 0; vsp = 0; } }
     cooldown = cooldown_max;
     interact_cnt = 0;
 };
-

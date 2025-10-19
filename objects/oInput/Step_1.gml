@@ -39,13 +39,18 @@ var down_attack = k_atk_down  || g_atk_down;
 var pressed_jump   = (k_jump_pressed || g_jump_pressed) || ( down_jump   && !_jump_prev   );
 var pressed_attack = (k_atk_pressed  || g_atk_pressed ) || ( down_attack && !_attack_prev );
 
-// -------- Apply global gates (from portal/fade/UI) --------
-var gated = (!global.input.input_enabled) || global.input.ui_captured || global.input.player_locked;
+// -------- Apply gates --------
+// Either remove gating entirely:
+var gated = false;
+
+// Or only gate when paused:
+/// var gated = global.paused;
 if (gated) {
     mx = 0;
     down_jump = false; down_attack = false;
     pressed_jump = false; pressed_attack = false;
 }
+
 
 // -------- Publish --------
 global.input.move_x        = mx;

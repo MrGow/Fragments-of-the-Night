@@ -1,12 +1,17 @@
+/// oHubExit - Create
 
+// Tunables
+if (!variable_instance_exists(id, "require_up"))   require_up   = true;   // must press UP to exit
+if (!variable_instance_exists(id, "use_fade"))     use_fade     = true;   // use oFade transition
+if (!variable_instance_exists(id, "prompt_text"))  prompt_text  = "Press \u2191 to leave";
+if (!variable_instance_exists(id, "cooldown_max")) cooldown_max = 12;
 
+// Runtime
+cooldown = 0;
+armed    = true;
 
-if (!variable_instance_exists(id,"prompt_text")) prompt_text = "Press \u2191 to leave";
-if (!variable_instance_exists(id,"use_fade"))    use_fade    = true;
-
-hovering = false;
-
-up_pressed = function() {
+// Local helper: check UP (keyboard + pad)
+_pressed_up = function() {
     if (keyboard_check_pressed(vk_up) || keyboard_check(vk_up)) return true;
     for (var dev = 0; dev < 8; dev++) {
         if (!gamepad_is_connected(dev)) continue;
@@ -14,3 +19,5 @@ up_pressed = function() {
     }
     return false;
 };
+
+

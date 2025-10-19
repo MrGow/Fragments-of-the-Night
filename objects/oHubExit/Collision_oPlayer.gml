@@ -1,20 +1,35 @@
-if (!up_pressed()) exit;
+/// oHubExit — Collision with oPlayer  (NO LOCKING)
 
-// ROOM-TYPED return target saved earlier by the mirror door
-if (!variable_global_exists("return_room")) exit;
-var r_target = global.return_room;
+// Require UP to leave? (toggle as desired)
+var require_up = true;
+if (require_up) {
+    var pressed_up = keyboard_check_pressed(vk_up) || keyboard_check_pressed(ord("W"));
+    for (var dev = 0; dev < 8; dev++) {
+        if (!gamepad_is_connected(dev)) continue;
+        if (gamepad_button_check_pressed(dev, gp_padu)) pressed_up = true;
+    }
+    if (!pressed_up) exit;
+}
 
-// tell the NEXT room where to place the player (always set it!)
-var tag = (variable_global_exists("return_spawn_id") && !is_undefined(global.return_spawn_id))
-          ? global.return_spawn_id
-          : "mirror_exit_back";
-global.spawn_tag_next = tag;
+// Prepare return spawn (use the tag we saved when entering via oCamDoor)
+if (!is_undefined(global.return_spawn_id)) {
+    global.spawn_tag_next = string(global.return_spawn_id);
+}
 
-// fade to the return room
-var f = instance_exists(oFade) ? instance_find(oFade, 0)
-                               : instance_create_layer(0, 0, "Instances", oFade);
-with (f) {
-    target_room    = r_target;   // ROOM asset, not a string/index
-    pending_switch = true;
-    if (state == 0) { state = 1; transit_ttl = 12; }
+var target = is_undefined(global.return_room) ? room : global.return_room;
+
+// Start transition (no locks, no flags)
+if (object_exists(oFade)) {
+    var _layer = layer_get_id("Actors");
+    if (_layer == -1) _layer = layer_get_id("FX");
+    if (_layer == -1) _layer = layer_create(0, "Actors");
+    var f = instance_exists(oFade) ? instance_find(oFade, 0)
+                                   : instance_create_layer(0, 0, _layer, oFade);
+    with (f) {
+        target_room    = target;
+        pending_switch = true;
+        if (state == 0) { state = 1; transit_ttl = 12; }
+    }
+} else {
+    room_goto(target);
 }

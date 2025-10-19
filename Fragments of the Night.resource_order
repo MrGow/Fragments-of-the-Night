@@ -43,6 +43,7 @@
     {"name":"SaveRoom","order":3,"path":"rooms/SaveRoom/SaveRoom.yy",},
     {"name":"enemy_take_damage","order":2,"path":"scripts/enemy_take_damage/enemy_take_damage.yy",},
     {"name":"enemy_tick_invuln","order":3,"path":"scripts/enemy_tick_invuln/enemy_tick_invuln.yy",},
+    {"name":"player_take_damage","order":7,"path":"scripts/player_take_damage/player_take_damage.yy",},
     {"name":"script_input_rumble","order":1,"path":"scripts/script_input_rumble/script_input_rumble.yy",},
     {"name":"Fade","order":1,"path":"sprites/Fade/Fade.yy",},
     {"name":"Input","order":2,"path":"sprites/Input/Input.yy",},

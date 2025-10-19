@@ -8,7 +8,7 @@ BASE_FACING = -1;
 hp                = 4;
 is_dead           = false;
 death_sprite      = spriteSunPilgrimDeath;
-death_image_speed = 0.25;
+death_image_speed = 0.75;
 explosion_object  = oSunPilgrimExplosion; // set to noone if this type shouldn't explode
 
 // ---- MOVEMENT / AI ----

@@ -1,30 +1,20 @@
-/// oSunPilgrim — Step
+/// oSunPilgrim — Step (parent-first; AI only, parent governs death/i-frames)
 
-// ----- EARLY-OUT IF DEAD (freeze AI; let anim play to Animation End) -----
-if (is_dead) {
-    if (death_sprite != -1) {
-        if (sprite_index != death_sprite) { sprite_index = death_sprite; image_index = 0; }
-        image_speed = death_image_speed;
-    } else {
-        if (explosion_object != noone && object_exists(explosion_object)) {
-            instance_create_layer(x, y, layer, explosion_object);
-        }
-        instance_destroy();
-    }
-    hsp = 0; vsp = 0;
-    exit;
-}
+// 1) Let the parent (oParEnemy) run universal logic first (death, i-frames, etc.)
+event_inherited();          // calls oParEnemy Step
+if (is_dead) exit;          // if parent marked us dead this step, stop AI immediately
 
-// ----- COOLDOWNS / TARGET -----
-var dt = delta_time/1000000;
+// 2) Cooldowns / target
+var dt = delta_time / 1000000;
 if (attack_cd > 0) attack_cd -= dt;
 
 if (!instance_exists(target) && instance_exists(oPlayer)) {
     target = instance_nearest(x, y, oPlayer);
 }
 
-// ----- (optional) gravity / collisions -----
-// vsp += grav; y += vsp;
+// 3) (Optional) gravity/collisions (disabled in your current setup)
+// vsp += grav;
+// y += vsp;
 
 // ================== STATE MACHINE ==================
 switch (state) {
@@ -82,7 +72,7 @@ switch (state) {
             state = SP_STATE.ATTACK;
             sprite_index = spriteSunPilgrimAttack;
             image_index  = 0;
-            image_speed  = 0.25;
+            image_speed  = 0.50;
             attack_spawned_hitbox = false;
 
             // lock facing toward player for the swing (respect base art)
@@ -103,9 +93,9 @@ switch (state) {
     case SP_STATE.ATTACK: {
         // keep explicit attack sprite & fixed speed
         sprite_index = spriteSunPilgrimAttack;
-        image_speed  = 0.25;
+        image_speed  = 0.35;
 
-        // spawn hitbox exactly once in active frames (tune if needed)
+        // spawn hitbox exactly once during active frames
         var active_a = 3.0;
         var active_b = 5.5;
 
@@ -122,5 +112,8 @@ switch (state) {
         hsp = 0;
     } break;
 }
+
+// (No death handling here — parent manages death animation and cleanup)
+
 
 

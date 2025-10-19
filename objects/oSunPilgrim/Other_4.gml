@@ -1,13 +1,16 @@
-/// oSunPilgrim — Room Start (hard reset of transient state)
-is_dead            = false;
-attack_cd          = 0;
+/// oSunPilgrim — Room Start (robust reset; parent handles death/i-frames)
+
+is_dead               = false;          // child doesn't force death here; parent governs it
+attack_cd             = 0;
 attack_spawned_hitbox = false;
-attack_face_locked = false;
+attack_face_locked    = false;
 
-// (Re-apply death config just in case any room scripts touched assets)
-death_sprite       = spriteSunPilgrimDeath;
-death_image_speed  = 1;
-explosion_object   = oSunPilgrimExplosion;
+// Keep death visuals consistent with Create (don’t overwrite to 1.0)
+death_sprite      = spriteSunPilgrimDeath;
+death_image_speed = 0.25;
 
-// (Optional) reset HP here too if you want the enemy to always be fresh on room entry
-// hp = 4;  // uncomment if Pilgrim should respawn full health when you re-enter
+/* @type {asset.object} */
+explosion_object  = oSunPilgrimExplosion;  // OBJECT ASSET, not an instance
+
+// (Optional) If you want full heal on room load, uncomment:
+hp = 4;
