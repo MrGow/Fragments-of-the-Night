@@ -1,17 +1,14 @@
-/// oMirrorTransition - Room Start (SAFE, no undefined reads)
+/// oMirrorTransition - Room Start (single-pass shatter → fade-in)
 
 // Refresh GUI dims in case resolution changed
 gui_w = display_get_gui_width();
 gui_h = display_get_gui_height();
 
 if (phase == Phase.Switch) {
-    // Play IN direction
-    if (use_mirror) {
-        image_index = image_number - 1;
-        image_speed = -sprite_get_number(sprite_index) / (room_speed * effect_time);
-    } else {
-        fade_alpha = 1;
-    }
+    // IN direction = fade instead of reverse-shatter
+    use_mirror = false;    // ensure Step does the fade branch
+    fade_alpha = 1;
+    image_speed = 0;
     phase = Phase.In;
 
     // ----------------------------
@@ -21,16 +18,17 @@ if (phase == Phase.Switch) {
     global._transition_spawn_tag = undefined;
 
     if (!is_undefined(_tag_local)) {
-        // If you later add scr_spawn_at_tag(tag), we will call it.
+        // If a spawn script exists, call it safely by name
         var _spawn_script = asset_get_index("scr_spawn_at_tag");
         if (_spawn_script != -1) {
+            // call: function scr_spawn_at_tag(tag)
             script_execute(_spawn_script, _tag_local);
         } else {
-            // Make the tag accessible inside `with(...)` safely
-            _spawn_tag_tmp = _tag_local;   // <-- instance var on THIS oMirrorTransition
-            _placed_tmp    = false;        // <-- instance var placement flag
+            // Generic fallback: move player to any instance with matching tag/spawn_tag
+            _spawn_tag_tmp = _tag_local;  // temp instance var for 'other' access in with()
+            _placed_tmp    = false;
 
-            // Prefer oSpawn if present
+            // Prefer a dedicated oSpawn if present
             var _oSpawn = asset_get_index("oSpawn");
             if (_oSpawn != -1) {
                 with (oSpawn) {
@@ -45,7 +43,7 @@ if (phase == Phase.Switch) {
                 }
             }
 
-            // Fallback: scan any instance that exposes tag/spawn_tag
+            // Fallback: scan any instance exposing tag/spawn_tag
             if (!_placed_tmp) {
                 with (all) {
                     var _has_tag  = variable_instance_exists(id, "tag");
@@ -59,14 +57,15 @@ if (phase == Phase.Switch) {
                 }
             }
 
-            // Clean up temps (not strictly required)
+            // Clean up temp
             _spawn_tag_tmp = undefined;
         }
     }
 
-    // Optional: call a SaveRoom hook safely if you add one later
+    // Optional: hook for entering SaveRoom
     var _enter_sr = asset_get_index("scr_on_enter_saveroom");
     if (room == SaveRoom && _enter_sr != -1) {
         script_execute(_enter_sr);
     }
 }
+

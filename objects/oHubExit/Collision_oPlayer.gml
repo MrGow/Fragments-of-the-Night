@@ -11,6 +11,8 @@ if (require_up) {
     if (!pressed_up) exit;
 }
 
+if (variable_global_exists("_transition_busy") && global._transition_busy) exit;
+
 // --- Resolve destination room safely ---
 function _get_exit_target(inst) {
     // try common instance vars set in Room Editor

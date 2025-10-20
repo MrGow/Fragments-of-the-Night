@@ -27,14 +27,17 @@ up_pressed = function() {
     return false;
 };
 
+// --- Helper: set SaveRoom return meta ---
+set_return_info = function(_spawn_back_tag, _spawn_next_tag) {
+    global.return_room     = room;               // where to go back to
+    global.return_spawn_id = _spawn_back_tag;    // spawn to use when we come back FROM SaveRoom
+    global.spawn_tag_next  = _spawn_next_tag;    // spawn to use on entry INTO SaveRoom
+};
+
 // Do the transition (called from Step when conditions are met)
 do_mirror_transition = function(pl) {
     // Remember where to return to, and the spawn we want when we come back
-    global.return_room     = room;
-    global.return_spawn_id = "mirror_exit_back"; // place an oSpawn with this tag near the mirror
-
-    // Where to land in SaveRoom
-    global.spawn_tag_next  = "mirror_entry";
+    set_return_info("mirror_exit_back", "mirror_entry");
 
     // Stop player velocity (nice to have)
     if (pl != noone) { with (pl) {
@@ -43,6 +46,10 @@ do_mirror_transition = function(pl) {
     }}
 
     var target = hub_room;
+
+    // If a transition is already running, bail safely
+    if (variable_global_exists("_transition_busy") && global._transition_busy) exit;
+
     // Use the new transition (auto-picks mirror if SaveRoom is involved)
     script_transition_goto(target, global.spawn_tag_next);
 
@@ -51,5 +58,3 @@ do_mirror_transition = function(pl) {
     cooldown = cooldown_max;
     interact_cnt = 0;
 };
-
-
