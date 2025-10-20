@@ -1,6 +1,6 @@
-/// oHubExit — Collision with oPlayer  (NO LOCKING)
+/// oHubExit — Collision with oPlayer (robust, no missing `target` crash)
 
-// Require UP to leave? (toggle as desired)
+// --- Optional: require UP to use the exit ---
 var require_up = true;
 if (require_up) {
     var pressed_up = keyboard_check_pressed(vk_up) || keyboard_check_pressed(ord("W"));
@@ -11,25 +11,39 @@ if (require_up) {
     if (!pressed_up) exit;
 }
 
-// Prepare return spawn (use the tag we saved when entering via oCamDoor)
+// --- Resolve destination room safely ---
+function _get_exit_target(inst) {
+    // try common instance vars set in Room Editor
+    if (variable_instance_exists(inst, "target"))      return inst.target;
+    if (variable_instance_exists(inst, "room_target")) return inst.room_target;
+    if (variable_instance_exists(inst, "target_room")) return inst.target_room;
+
+    // fallback: if we're in SaveRoom, go back to the stored return room
+    if (room == SaveRoom && !is_undefined(global.return_room)) return global.return_room;
+
+    return undefined;
+}
+
+var _dest = _get_exit_target(id);
+
+if (is_undefined(_dest)) {
+    // Nothing set — don’t crash; just warn in the output
+    show_debug_message("[oHubExit] No destination room set (target/room_target/target_room missing), and no global.return_room fallback.");
+    exit;
+}
+
+// --- Prepare spawn tag (if we saved one on the way in) ---
 if (!is_undefined(global.return_spawn_id)) {
     global.spawn_tag_next = string(global.return_spawn_id);
-}
-
-var target = is_undefined(global.return_room) ? room : global.return_room;
-
-// Start transition (no locks, no flags)
-if (object_exists(oFade)) {
-    var _layer = layer_get_id("Actors");
-    if (_layer == -1) _layer = layer_get_id("FX");
-    if (_layer == -1) _layer = layer_create(0, "Actors");
-    var f = instance_exists(oFade) ? instance_find(oFade, 0)
-                                   : instance_create_layer(0, 0, _layer, oFade);
-    with (f) {
-        target_room    = target;
-        pending_switch = true;
-        if (state == 0) { state = 1; transit_ttl = 12; }
-    }
 } else {
-    room_goto(target);
+    // Optional: a per-exit spawn tag variable you can set in editor
+    if (variable_instance_exists(id, "spawn_tag")) {
+        global.spawn_tag_next = string(spawn_tag);
+    } else {
+        global.spawn_tag_next = undefined;
+    }
 }
+
+// --- Run the unified transition ---
+script_transition_goto(_dest, global.spawn_tag_next);
+

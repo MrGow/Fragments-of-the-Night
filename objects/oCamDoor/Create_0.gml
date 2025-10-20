@@ -36,29 +36,20 @@ do_mirror_transition = function(pl) {
     // Where to land in SaveRoom
     global.spawn_tag_next  = "mirror_entry";
 
-    // Stop player velocity (nice to have, not required)
-    if (pl != noone) { with (pl) { if (variable_instance_exists(id,"hsp")) hsp = 0; if (variable_instance_exists(id,"vsp")) vsp = 0; } }
+    // Stop player velocity (nice to have)
+    if (pl != noone) { with (pl) {
+        if (variable_instance_exists(id,"hsp")) hsp = 0;
+        if (variable_instance_exists(id,"vsp")) vsp = 0;
+    }}
 
-    // Start transition (no locking)
     var target = hub_room;
-
-    if (use_fade && object_exists(oFade)) {
-        var _layer = layer_get_id("Actors");
-        if (_layer == -1) _layer = layer_get_id("FX");
-        if (_layer == -1) _layer = layer_create(0, "Actors");
-        var f = instance_exists(oFade) ? instance_find(oFade, 0)
-                                       : instance_create_layer(0, 0, _layer, oFade);
-        with (f) {
-            target_room    = target;
-            pending_switch = true;
-            if (state == 0) { state = 1; transit_ttl = 12; }
-        }
-    } else {
-        room_goto(target);
-    }
+    // Use the new transition (auto-picks mirror if SaveRoom is involved)
+    script_transition_goto(target, global.spawn_tag_next);
 
     // Disarm & cooldown so it won’t retrigger while overlapping
     armed = false;
     cooldown = cooldown_max;
     interact_cnt = 0;
 };
+
+

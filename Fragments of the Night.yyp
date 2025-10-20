@@ -75,6 +75,7 @@
     {"id":{"name":"script_close_pause","path":"scripts/script_close_pause/script_close_pause.yy",},},
     {"id":{"name":"script_input_rumble","path":"scripts/script_input_rumble/script_input_rumble.yy",},},
     {"id":{"name":"script_open_pause","path":"scripts/script_open_pause/script_open_pause.yy",},},
+    {"id":{"name":"script_transition_goto","path":"scripts/script_transition_goto/script_transition_goto.yy",},},
     {"id":{"name":"Camera","path":"sprites/Camera/Camera.yy",},},
     {"id":{"name":"Fade","path":"sprites/Fade/Fade.yy",},},
     {"id":{"name":"Input","path":"sprites/Input/Input.yy",},},

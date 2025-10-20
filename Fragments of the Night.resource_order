@@ -49,6 +49,7 @@
     {"name":"script_close_pause","order":9,"path":"scripts/script_close_pause/script_close_pause.yy",},
     {"name":"script_input_rumble","order":1,"path":"scripts/script_input_rumble/script_input_rumble.yy",},
     {"name":"script_open_pause","order":8,"path":"scripts/script_open_pause/script_open_pause.yy",},
+    {"name":"script_transition_goto","order":10,"path":"scripts/script_transition_goto/script_transition_goto.yy",},
     {"name":"Fade","order":1,"path":"sprites/Fade/Fade.yy",},
     {"name":"Input","order":2,"path":"sprites/Input/Input.yy",},
     {"name":"Sprite14","order":6,"path":"sprites/Sprite14/Sprite14.yy",},
