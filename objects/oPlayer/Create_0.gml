@@ -1,40 +1,49 @@
-/// oPlayer — Create  (fully declared; Space=jump, Z/X=attack)
+/// oPlayer — Create  (Space=jump, Z/X/mouse=attack)
 
-// Movement/control
+// ---------------- Movement / control ----------------
 stunned                 = false;
 can_move                = true;
 hsp                     = 0;
 vsp                     = 0;
 
-// State / animation
+// ---------------- State / animation -----------------
 state                   = "idle";
+image_xscale            = 1;
 attack_lock             = false;
+attack_lock_frames      = 0;       // optional tiny frame-lock support
 
-// Optional attack sprite (auto-detect; stays -1 if not present)
-spr_attack = -1;
-var _maybe = asset_get_index("spriteSwordAttack");
-if (_maybe != -1) spr_attack = _maybe;
+// ---------------- Sprites (look up by name) ----------------------
+spr_idle   = asset_get_index("spritePlayerIdle");
+spr_run    = asset_get_index("spritePlayerRun");
+spr_jump   = asset_get_index("spritePlayerJump");
+spr_attack = asset_get_index("spriteSwordAttack"); // optional; may be -1
 
-// Movement tuning (adjust to taste)
-move_speed              = 2.0;
-jump_speed              = -5.0;     // up is negative
-gravity_amt             = 0.35;
+// Start in Idle if available
+if (spr_idle != -1) { sprite_index = spr_idle; image_speed = 0.4; }
+
+// ---------------- Movement tuning -------------------
+move_speed              = 2.5;
+jump_speed              = -4.0;    // up is negative
+gravity_amt             = 0.2;
 low_jump_multiplier     = 1.7;
 fall_multiplier         = 1.5;
 max_fall                = 8.0;
 
-// Coyote / buffer (frames)
+// --------------- Coyote / buffer (frames) -----------
 coyote_time_frames      = 6;
 jump_buffer_time_frames = 6;
 coyote_timer            = 0;
 jump_buffer_timer       = 0;
 
-// Attack gating (Step reads these)
+// ----------------- Attack gating --------------------
 can_attack              = true;
-attack_cooldown         = 0;
+attack_cooldown         = 0;       // frames remaining before next attack can start
+attack_end_fired        = false;   // one-shot guard for ending the attack anim
+attack_anim_speed       = 0.35;    // ↓ slower so the slash is readable
+// (No fixed attack_duration_frames; cooldown will follow sprite length)
 
-// Tiny frame-lock support (only used if you enable it in Step)
-attack_lock_frames      = 0;
+// Air drift while attacking mid-air
+air_attack_drift        = 1.15;    // >1 = more air control during aerial attack
 
 // Legacy flag some code touches
 if (!variable_instance_exists(id,"input_locked")) input_locked = false;
@@ -45,7 +54,6 @@ if (instance_number(oPlayerCombat) == 0) {
     _pc.owner = id;
     show_debug_message("[PC] Spawned oPlayerCombat and bound owner");
 } else {
-    // Bind nearest combat to this player, just in case
     var _pc2 = instance_nearest(x, y, oPlayerCombat);
     if (_pc2 != noone) { _pc2.owner = id; }
     show_debug_message("[PC] Rebound existing oPlayerCombat to player");

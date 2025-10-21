@@ -5,8 +5,8 @@
   "isDnD":false,
   "name":"script_close_pause",
   "parent":{
-    "name":"Scripts",
-    "path":"folders/Scripts.yy",
+    "name":"Pause Menu",
+    "path":"folders/Scripts/Pause Menu.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",

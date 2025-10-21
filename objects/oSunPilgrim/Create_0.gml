@@ -36,7 +36,7 @@ target = noone;
 // ---- SPRITES / MASK ----
 sprite_index = spriteSunPilgrimIdle;
 image_index  = 0;
-image_speed  = 0.18;
+image_speed  = 0.30;
 mask_index   = spriteSunPilgrimCollisionMask;
 
 // ---- SIMPLE FSM ----

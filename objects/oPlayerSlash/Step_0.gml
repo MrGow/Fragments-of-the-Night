@@ -11,11 +11,11 @@ var w2 = hit_w * 0.5, h2 = hit_h * 0.5;
 var x1 = x - w2, y1 = y - h2, x2 = x + w2, y2 = y + h2;
 
 // ------------------------------------------------------------
-// 0) Sanity: ensure damage script exists (or we crash silently)
-var has_damage = script_exists(enemy_take_damage);
+// 0) Sanity: ensure damage function exists (or we log & bail)
+var has_damage = (asset_get_index("enemy_take_damage") != -1);
 if (!has_damage) {
-    show_debug_message("[SLASH][ERR] enemy_take_damage script NOT FOUND!");
-    // bail, but keep lifetime so we see the error
+    show_debug_message("[SLASH][ERR] enemy_take_damage() NOT FOUND!");
+    // bail (keep lifetime so error is visible)
 }
 
 // 1) Get ALL instances overlapping our rect (engine AABB)
@@ -68,7 +68,7 @@ if (first != noone) {
 }
 
 // Optional: FORCE-HIT any oSunPilgrim overlapped (toggle if needed)
-var FORCE_HIT_PILGRIMS = false; // set to true if you want to guarantee hits during tests
+var FORCE_HIT_PILGRIMS = false;
 if (FORCE_HIT_PILGRIMS) {
     var nraw2 = ds_list_size(raw);
     for (var k = 0; k < nraw2; k++) {
@@ -101,6 +101,7 @@ if (ds_list_size(hits) > 0 && has_damage) {
             show_debug_message("[DMG->] " + name + " pre hp=" + prehp);
         }
 
+        // Call the damage function directly
         enemy_take_damage(enemy_id, damage, x);
 
         with (enemy_id) {

@@ -5,8 +5,8 @@
   "isDnD":false,
   "name":"script_input_rumble",
   "parent":{
-    "name":"Scripts",
-    "path":"folders/Scripts.yy",
+    "name":"Rumble",
+    "path":"folders/Scripts/Rumble.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",

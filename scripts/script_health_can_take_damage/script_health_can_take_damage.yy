@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"script_health_can_take_damage",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"script_health_can_take_damage",
+  "parent":{
+    "name":"Combat",
+    "path":"folders/Scripts/Combat.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

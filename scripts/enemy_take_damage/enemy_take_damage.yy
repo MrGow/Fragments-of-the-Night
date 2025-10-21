@@ -5,8 +5,8 @@
   "isDnD":false,
   "name":"enemy_take_damage",
   "parent":{
-    "name":"Scripts",
-    "path":"folders/Scripts.yy",
+    "name":"Combat",
+    "path":"folders/Scripts/Combat.yy",
   },
   "resourceType":"GMScript",
   "resourceVersion":"2.0",
