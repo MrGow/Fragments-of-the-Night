@@ -58,3 +58,6 @@ if (instance_number(oPlayerCombat) == 0) {
     if (_pc2 != noone) { _pc2.owner = id; }
     show_debug_message("[PC] Rebound existing oPlayerCombat to player");
 }
+
+// ----------------- HP/Flask feedback (NEW) -----------------------
+hit_flash_timer = 0;    // brief red flash when hurt

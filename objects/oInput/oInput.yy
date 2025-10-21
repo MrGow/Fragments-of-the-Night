@@ -37,5 +37,5 @@
     "path":"sprites/Input/Input.yy",
   },
   "spriteMaskId":null,
-  "visible":true,
+  "visible":false,
 }

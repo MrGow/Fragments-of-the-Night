@@ -37,5 +37,5 @@
     "path":"sprites/Fade/Fade.yy",
   },
   "spriteMaskId":null,
-  "visible":true,
+  "visible":false,
 }

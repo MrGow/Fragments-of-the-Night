@@ -51,10 +51,14 @@ var k_atk_p  = keyboard_check_pressed(ord("Z"))
             || keyboard_check_pressed(ord("X"))
             || mouse_check_button_pressed(mb_left);
 
+// --- NEW: Flask key (keyboard 'E' by default) ---
+var k_flask_p = keyboard_check_pressed(ord("E"));
+
 var move_x = kx;
 var jump_p = k_jump_p;
 var jump_h = k_jump_h;
 var atk_p  = k_atk_p;
+var flask_p = k_flask_p;
 
 if (variable_global_exists("input") && is_struct(global.input)) {
     if (move_x == 0 && variable_struct_exists(global.input, "move_x"))
@@ -73,6 +77,14 @@ if (variable_global_exists("input") && is_struct(global.input)) {
             global.input.attack_pressed = false; // consume
         }
     }
+
+    // (Optional) if you later add a flask input to your input struct, OR it here:
+    // if (variable_struct_exists(global.input, "flask_pressed")) {
+    //     if (global.input.flask_pressed) {
+    //         flask_p = true;
+    //         global.input.flask_pressed = false;
+    //     }
+    // }
 }
 
 // -------- COOLDOWN -----------------------------------------------
@@ -85,20 +97,49 @@ var on_ground = __on_ground_check();
 if (on_ground) coyote_timer = coyote_time_frames; else if (coyote_timer > 0) coyote_timer--;
 if (jump_p)    jump_buffer_timer = jump_buffer_time_frames; else if (jump_buffer_timer > 0) jump_buffer_timer--;
 
-// -------- ATTACK TRIGGER (ties cooldown to sprite length) --------
-if (state != "attack" && can_attack && atk_p && attack_cooldown <= 0) {
-    if (spr_attack != -1) {
-        state            = "attack";
-        sprite_index     = spr_attack;
-        image_index      = 0;
-        image_speed      = attack_anim_speed;
-        attack_lock      = true;
-        attack_end_fired = false;
+// -------- HP Hooks (NEW): drinking lock & hurt flash ------------
+var drinking_lock = (variable_global_exists("_drinking_timer") && (global._drinking_timer > 0));
 
-        // Cooldown follows the current sprite length and speed
-        var _frames = max(1, image_number);                          // frames in current sprite
-        var _dur    = ceil(_frames / max(0.001, attack_anim_speed)); // frames to play fully
-        attack_cooldown = _dur + 2; // tiny buffer
+// If we were hurt this step, start a small flash
+if (variable_global_exists("_hurt_this_step") && global._hurt_this_step) {
+    hit_flash_timer = 6;
+}
+
+// Apply visual flash (simple red tint)
+if (hit_flash_timer > 0) {
+    hit_flash_timer--;
+    image_blend = c_red;
+} else {
+    image_blend = c_white;
+}
+
+// -------- ATTACK TRIGGER (ties cooldown to sprite length) --------
+// Block new attacks while drinking
+if (!drinking_lock) {
+    if (state != "attack" && can_attack && atk_p && attack_cooldown <= 0) {
+        if (spr_attack != -1) {
+            state            = "attack";
+            sprite_index     = spr_attack;
+            image_index      = 0;
+            image_speed      = attack_anim_speed;
+            attack_lock      = true;
+            attack_end_fired = false;
+
+            // Cooldown follows the current sprite length and speed
+            var _frames = max(1, image_number);                          // frames in current sprite
+            var _dur    = ceil(_frames / max(0.001, attack_anim_speed)); // frames to play fully
+            attack_cooldown = _dur + 2; // tiny buffer
+        }
+    }
+}
+
+// -------- FLASK USE (NEW) ----------------------------------------
+// We allow flask use on ground or air; you can change this if desired.
+// The health service will start a short drinking lock and drive the HUD anim.
+if (flask_p) {
+    if (script_health_use_flask()) {
+        // Optionally: nudge animation or SFX here; the HUD already animates the chalice.
+        // e.g., small vertical jitter or brief invuln is handled by the service lock.
     }
 }
 
@@ -115,13 +156,21 @@ if (!on_ground && state == "attack") {
     hsp_target *= air_attack_drift;
 }
 
+// Optional: reduce locomotion while drinking (keep control but softened)
+if (drinking_lock) {
+    hsp_target *= 0.6;
+}
+
 hsp = hsp_target; // (no acceleration; add smoothing if desired)
 
 // -------- EXECUTE JUMP (buffer + coyote) --------------------------
-if (state != "attack" && jump_buffer_timer > 0 && coyote_timer > 0) {
-    vsp = jump_speed;
-    jump_buffer_timer = 0;
-    coyote_timer      = 0;
+// Block starting a jump on the exact press during the drinking window (optional)
+if (!drinking_lock) {
+    if (state != "attack" && jump_buffer_timer > 0 && coyote_timer > 0) {
+        vsp = jump_speed;
+        jump_buffer_timer = 0;
+        coyote_timer      = 0;
+    }
 }
 
 // -------- VARIABLE GRAVITY ---------------------------------------
@@ -175,13 +224,16 @@ if (attack_lock_frames > 0) {
 if (abs(move_x) > 0.001) image_xscale = (move_x > 0) ? 1 : -1;
 
 // -------- STATE / ANIMATION (non-attack) -------------------------
-if (state != "attack") {
-    if (!on_ground) {
-        if (state != "jump") { state = "jump"; if (spr_jump != -1) sprite_index = spr_jump; image_speed = 0.3; }
-    } else if (abs(move_x) > 0.001) {
-        if (state != "run")  { state = "run";  if (spr_run  != -1) sprite_index = spr_run;  image_speed = 1.2; }
-    } else {
-        if (state != "idle") { state = "idle"; if (spr_idle != -1) sprite_index = spr_idle; image_speed = 0.4; }
+// While drinking, keep current sprite—don’t force a state change on idle/run swap (optional)
+if (!drinking_lock) {
+    if (state != "attack") {
+        if (!on_ground) {
+            if (state != "jump") { state = "jump"; if (spr_jump != -1) sprite_index = spr_jump; image_speed = 0.3; }
+        } else if (abs(move_x) > 0.001) {
+            if (state != "run")  { state = "run";  if (spr_run  != -1) sprite_index = spr_run;  image_speed = 1.2; }
+        } else {
+            if (state != "idle") { state = "idle"; if (spr_idle != -1) sprite_index = spr_idle; image_speed = 0.4; }
+        }
     }
 }
 
@@ -207,4 +259,3 @@ if (state == "attack" && !attack_end_fired) {
         }
     }
 }
-

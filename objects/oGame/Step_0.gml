@@ -1,30 +1,43 @@
-/// oGame — Step  (pause toggle + quick quit)
+/// oGame — Step  (pause toggle + quick quit + health timers)
+// ===== Health service timers (FIRST) =====
+if (!variable_global_exists("paused") || !global.paused) {
+    if (variable_global_exists("_iframes_timer")   && global._iframes_timer   > 0) global._iframes_timer--;
+    if (variable_global_exists("_drinking_timer")  && global._drinking_timer  > 0) global._drinking_timer--;
 
-// Toggle fullscreen
+    if (variable_global_exists("_hp_changed_this_step")) global._hp_changed_this_step = 0;
+    if (variable_global_exists("_healed_this_step"))     global._healed_this_step     = false;
+    if (variable_global_exists("_hurt_this_step"))       global._hurt_this_step       = false;
+}
+
+// ===== Health service timers (put FIRST so flags are fresh this frame) =====
+if (!variable_global_exists("paused") || !global.paused) {
+    if (variable_global_exists("_iframes_timer")   && global._iframes_timer   > 0) global._iframes_timer--;
+    if (variable_global_exists("_drinking_timer")  && global._drinking_timer  > 0) global._drinking_timer--;
+
+    // reset per-step HUD signals; the damage/heal scripts will set them again when needed
+    if (variable_global_exists("_hp_changed_this_step")) global._hp_changed_this_step = 0;
+    if (variable_global_exists("_healed_this_step"))     global._healed_this_step     = false;
+    if (variable_global_exists("_hurt_this_step"))       global._hurt_this_step       = false;
+}
+
+// ===== Toggle fullscreen =====
 if (keyboard_check_pressed(vk_f11)) {
     window_set_fullscreen(!window_get_fullscreen());
 }
 
-// Quick quit (dev): Shift + Esc
+// ===== Quick quit (dev): Shift + Esc =====
 if (keyboard_check(vk_shift) && keyboard_check_pressed(vk_escape)) { game_end(); exit; }
 
-// Gamepad Start detection (up to 4 pads)
+// ===== Gamepad Start detection (up to 4 pads) =====
 var gp_start_pressed = false;
 for (var i = 0; i < 4; i++) {
     if (!gamepad_is_connected(i)) continue;
     if (gamepad_button_check_pressed(i, gp_start)) gp_start_pressed = true;
 }
 
-/// oGame — Step (excerpt: pause toggle)
+// ===== Debounced pause toggle (Esc or Start) =====
+if (!variable_global_exists("can_toggle")) can_toggle = true;
 
-// Gamepad Start detection (up to 4 pads)
-var gp_start_pressed = false;
-for (var i = 0; i < 4; i++) {
-    if (!gamepad_is_connected(i)) continue;
-    if (gamepad_button_check_pressed(i, gp_start)) gp_start_pressed = true;
-}
-
-// Debounced pause toggle (Esc or Start)
 var pressed = keyboard_check_pressed(vk_escape) || gp_start_pressed;
 if (pressed && can_toggle) {
     if (global.paused) script_close_pause(); else script_open_pause();
@@ -32,7 +45,7 @@ if (pressed && can_toggle) {
 }
 if (!keyboard_check(vk_escape)) can_toggle = true;
 
-// DEV: force-spawn a slash with 'K' to bypass input gates (remove later)
+// ===== DEV: force-spawn a slash with 'K' to bypass input gates (remove later) =====
 if (keyboard_check_pressed(ord("K"))) {
     var pl = instance_exists(oPlayer) ? instance_find(oPlayer, 0) : noone;
     if (pl != noone) {

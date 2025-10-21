@@ -93,7 +93,7 @@ if (ds_list_size(hits) > 0 && has_damage) {
     for (var j = 0; j < ds_list_size(hits); j++) {
         var enemy_id = hits[| j];
         if (!instance_exists(enemy_id)) continue;
-
+		
         // Pre / Post HP logs for certainty
         with (enemy_id) {
             var prehp = variable_instance_exists(id,"hp") ? string(hp) : "NA";

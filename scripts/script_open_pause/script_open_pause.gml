@@ -7,7 +7,13 @@ function script_open_pause() {
 
     // Create pause menu AFTER deactivation so it stays active
     if (object_exists(oPauseMenu)) {
-        global.pause_menu_id = instance_create_depth(0, 0, -100000, oPauseMenu);
+        var _ui_name = "UI";
+        var _ui_id   = layer_get_id(_ui_name);
+        if (_ui_id == -1) {
+            // Create an instance layer named "UI" if missing (folders won't work)
+            _ui_id = layer_create(0, _ui_name);
+        }
+        global.pause_menu_id = instance_create_layer(0, 0, layer_get_name(_ui_id), oPauseMenu);
     } else {
         global.pause_menu_id = noone;
     }
@@ -26,4 +32,3 @@ function script_open_pause() {
 
     global.paused = true;
 }
-

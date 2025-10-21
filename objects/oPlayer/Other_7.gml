@@ -5,4 +5,3 @@ if (state == "attack") {
     // Optional: frame-based cooldown after swing
     // attack_cooldown = 8;
 }
-

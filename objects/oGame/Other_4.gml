@@ -108,3 +108,36 @@ with (oSunPilgrim) {
 if (!is_undefined(global.input)) {
     show_debug_message("[GATE] enabled=" + string(global.input.input_enabled) + " locked=" + string(global.input.player_locked) + " ui=" + string(global.input.ui_captured));
 }
+
+// ===================== HP / HUD SAFETY + SPAWN (UI layer) =====================
+
+// Seed safe defaults if Create didn't run yet
+if (!variable_global_exists("max_hp"))        global.max_hp = 10;
+if (!variable_global_exists("hp"))            global.hp = global.max_hp;
+if (!variable_global_exists("flask_max"))     global.flask_max = 3;
+if (!variable_global_exists("flask_stock"))   global.flask_stock = 1;
+if (!variable_global_exists("heal_amount"))   global.heal_amount = 2;   // 2 HP per drink
+if (!variable_global_exists("iframes_time"))  global.iframes_time = 22;
+if (!variable_global_exists("_iframes_timer")) global._iframes_timer = 0;
+if (!variable_global_exists("_drinking_timer")) global._drinking_timer = 0;
+if (!variable_global_exists("_drink_lockout"))  global._drink_lockout = 14;
+if (!variable_global_exists("_hp_changed_this_step")) global._hp_changed_this_step = 0;
+if (!variable_global_exists("_healed_this_step"))     global._healed_this_step = false;
+if (!variable_global_exists("_hurt_this_step"))       global._hurt_this_step = false;
+if (!variable_global_exists("dead"))          global.dead = false;
+
+// Ensure exactly one HUD exists, targeting the UI *instance* layer.
+// If the room doesn't have one, create it.
+if (!instance_exists(oHUD_HPFlask)) {
+    var _ui_name = "UI";
+    var _ui_id   = layer_get_id(_ui_name);
+    if (_ui_id == -1) {
+        // Create an instance layer named "UI" (folders aren't valid for spawning)
+        _ui_id = layer_create(0, _ui_name);
+    }
+    var _hud = instance_create_layer(0, 0, layer_get_name(_ui_id), oHUD_HPFlask);
+    show_debug_message("[HUD] Spawned oHUD_HPFlask on layer: " + layer_get_name(_ui_id));
+} else {
+    show_debug_message("[HUD] Found existing oHUD_HPFlask");
+}
+// ===========================================================================
