@@ -13,12 +13,12 @@ heal_anim_ms    = 14;
 
 lead_conn_count = 0;      // moons start immediately
 row_gap_px      = 6;
-hp_y_offset     = 12;
+hp_y_offset     = 20;
 skull_y_nudge   = 64;
 
 // Vine look
-connector_flipped               = false; // your art is correct orientation
-connector_step_locked_to_moons  = true;  // phase-lock vine beats to moon spacing
+connector_flipped               = false;
+connector_step_locked_to_moons  = true;
 
 // ====== SPRITES ======
 spr_moon_full        = sprite_moon_full;
@@ -62,8 +62,14 @@ display_hp    = target_hp;
 max_hp_cache  = (variable_global_exists("max_hp") ? global.max_hp : 1);
 
 skull_alert_t = 0;
-chal_anim_t   = 0;
 
+// Drink timing book-keeping (NEW)
+prev_drink_timer = (variable_global_exists("_drinking_timer") ? global._drinking_timer : 0);
+// Default peak: use drink lockout if present, else use frames in strip (any non-zero)
+drink_timer_max  = (variable_global_exists("_drink_lockout") ? max(1, global._drink_lockout)
+                                                             : max(1, sprite_get_number(spr_flask_use_strip)));
+
+// Per-moon arrays
 var cap = max(1, max_hp_cache);
 moon_state  = array_create(cap, 0);
 moon_frame  = array_create(cap, 0);
@@ -72,13 +78,6 @@ active_anim_index = -1;
 
 var last = sprite_get_number(spr_moon_fill_strip) - 1;
 for (var i = 0; i < max_hp_cache; i++) {
-    if (i < display_hp) {
-        moon_state[i] = 1;
-        moon_frame[i] = 0;
-        moon_dir[i]   = 0;
-    } else {
-        moon_state[i] = 0;
-        moon_frame[i] = last;
-        moon_dir[i]   = 0;
-    }
+    if (i < display_hp) { moon_state[i] = 1; moon_frame[i] = 0; moon_dir[i] = 0; }
+    else { moon_state[i] = 0; moon_frame[i] = last; moon_dir[i] = 0; }
 }

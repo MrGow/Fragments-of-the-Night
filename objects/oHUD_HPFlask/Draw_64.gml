@@ -6,7 +6,7 @@
 var gx = base_x;
 var gy = base_y;
 
-// ===== Skull (lowered so antlers touch the vine) =====
+// ===== Skull =====
 var spr_skull = (skull_alert_t > 0) ? spr_skull_alert : spr_skull_idle;
 draw_sprite_ext(spr_skull, 0, gx, gy + skull_y_nudge, ui_scale, ui_scale, 0, c_white, 1);
 
@@ -15,21 +15,16 @@ var hp_x = gx + skull_w + 6;
 var hp_y = gy + hp_y_offset;
 
 // ===== Vine (behind moons), phase-locked to moon spacing =====
-var step = connector_step_locked_to_moons ? (moon_w + moon_gap_px) : conn_w_raw;
-
-// start the vine exactly at the first moon’s left edge
+var step = (moon_w + moon_gap_px);
 var moon_row_x = hp_x + (lead_conn_count * step);
 var vine_start = moon_row_x;
 var vine_end   = moon_row_x + (max_hp_cache * step);
 
-// draw one connector "beat" per moon slot (no flip)
 var vx = vine_start;
 for (var i = 0; i < max_hp_cache; i++) {
     draw_sprite_ext(spr_connector, 0, vx, hp_y, ui_scale, ui_scale, 0, c_white, 1);
     vx += step;
 }
-
-// draw a single end-cap after the last moon slot (no flip)
 draw_sprite_ext(spr_connector_end, 0, vine_end, hp_y, ui_scale, ui_scale, 0, c_white, 1);
 
 // ===== Moons (on top of the vine) =====
@@ -57,15 +52,20 @@ if (variable_global_exists("flask_stock") && global.flask_stock <= 0) chal_alpha
 var chal_x = hp_x;
 var chal_y = hp_y + moon_h + row_gap_px;
 
-if (chal_anim_t > 0) {
+// ---- DRINK-ANIM: follow global._drinking_timer exactly ----
+var drink_t = (variable_global_exists("_drinking_timer") ? global._drinking_timer : 0);
+
+if (drink_t > 0) {
+    var peak  = max(1, drink_timer_max); // << always defined now
     var total = max(1, sprite_get_number(spr_flask_use_strip));
-    var p     = 1 - (chal_anim_t / max(1, heal_anim_ms));
+    var p     = 1 - (drink_t / peak);                // 0 → 1 over the sip
     var sub   = clamp(floor(p * (total - 1)), 0, total - 1);
     draw_sprite_ext(spr_flask_use_strip, sub, chal_x, chal_y, ui_scale, ui_scale, 0, c_white, chal_alpha);
 } else {
     draw_sprite_ext(spr_flask_idle, 0, chal_x, chal_y, ui_scale, ui_scale, 0, c_white, chal_alpha);
 }
 
+// Digits
 var stock = (variable_global_exists("flask_stock") ? max(0, global.flask_stock) : 0);
 var num   = string(stock);
 var len   = string_length(num);
