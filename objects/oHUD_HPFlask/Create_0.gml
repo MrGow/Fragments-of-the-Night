@@ -3,9 +3,9 @@ persistent = true; // keep HUD across rooms
 ui_scale = 1; // or 2 if you want bigger UI; avoid decimals (1.5 etc.)
 
 // ====== CONFIG ======
-ui_scale        = 1.0;
+ui_scale        = 1.5;
 margin_x        = 16;
-margin_y        = 36;
+margin_y        = 56;
 
 moon_gap_px     = 3;
 anim_speed      = 0.6;
@@ -15,7 +15,7 @@ heal_anim_ms    = 14;
 lead_conn_count = 0;      // moons start immediately
 row_gap_px      = 6;
 hp_y_offset     = 50;
-skull_y_nudge   = 94;
+skull_y_nudge   = 120;
 
 // Vine look
 connector_flipped               = false;
