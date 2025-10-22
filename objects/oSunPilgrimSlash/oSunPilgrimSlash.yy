@@ -9,8 +9,8 @@
   "name":"oSunPilgrimSlash",
   "overriddenProperties":[],
   "parent":{
-    "name":"oEnemies",
-    "path":"folders/Objects/oEnemies.yy",
+    "name":"EnemyObjects",
+    "path":"folders/Objects/EnemyObjects.yy",
   },
   "parentObjectId":null,
   "persistent":false,

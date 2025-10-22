@@ -8,8 +8,8 @@
   "name":"oSpawn",
   "overriddenProperties":[],
   "parent":{
-    "name":"SaveRoomTeleport",
-    "path":"folders/Objects/SaveRoomTeleport.yy",
+    "name":"MirrorTeleportObjects",
+    "path":"folders/Objects/MirrorTeleportObjects.yy",
   },
   "parentObjectId":null,
   "persistent":false,

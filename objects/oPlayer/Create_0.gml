@@ -13,10 +13,12 @@ attack_lock             = false;
 attack_lock_frames      = 0;       // optional tiny frame-lock support
 
 // ---------------- Sprites (look up by name) ----------------------
-spr_idle   = asset_get_index("spritePlayerIdle");
-spr_run    = asset_get_index("spritePlayerRun");
-spr_jump   = asset_get_index("spritePlayerJump");
-spr_attack = asset_get_index("spriteSwordAttack"); // optional; may be -1
+spr_idle     = asset_get_index("spritePlayerIdle");
+spr_run      = asset_get_index("spritePlayerRun");
+spr_jump     = asset_get_index("spritePlayerJump");
+spr_attack   = asset_get_index("spriteSwordAttack"); // optional; may be -1
+spr_drink    = asset_get_index("spritePlayerDrink"); // NEW (can be -1 if not imported yet)
+spr_hurt     = asset_get_index("spritePlayerHurt");  // NEW (can be -1 if not imported yet)
 
 // Start in Idle if available
 if (spr_idle != -1) { sprite_index = spr_idle; image_speed = 0.4; }
@@ -40,10 +42,13 @@ can_attack              = true;
 attack_cooldown         = 0;       // frames remaining before next attack can start
 attack_end_fired        = false;   // one-shot guard for ending the attack anim
 attack_anim_speed       = 0.35;    // ↓ slower so the slash is readable
-// (No fixed attack_duration_frames; cooldown will follow sprite length)
+
+// ---- NEW: Drink/Hurt animation speeds ---------------
+drink_anim_speed        = 0.35;    // tune to your strip
+hurt_anim_speed         = 0.55;    // short wince
 
 // Air drift while attacking mid-air
-air_attack_drift        = 1.15;    // >1 = more air control during aerial attack
+air_attack_drift        = 1.15;
 
 // Legacy flag some code touches
 if (!variable_instance_exists(id,"input_locked")) input_locked = false;
@@ -59,5 +64,3 @@ if (instance_number(oPlayerCombat) == 0) {
     show_debug_message("[PC] Rebound existing oPlayerCombat to player");
 }
 
-// ----------------- HP/Flask feedback (NEW) -----------------------
-hit_flash_timer = 0;    // brief red flash when hurt

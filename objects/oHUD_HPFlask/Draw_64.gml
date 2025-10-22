@@ -1,4 +1,9 @@
 /// oHUD_HPFlask — Draw GUI
+// Snap GUI anchors to pixels to avoid subpixel blur
+base_x = round(base_x);
+base_y = round(base_y);
+var hp_x = round(base_x + skull_w + 6);
+var hp_y = round(base_y + hp_y_offset);
 
 // Row 1: Skull + continuous vine + Moons
 // Row 2: Chalice + digits

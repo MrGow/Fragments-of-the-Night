@@ -1,5 +1,6 @@
 /// oHUD_HPFlask — Create
 persistent = true; // keep HUD across rooms
+ui_scale = 1; // or 2 if you want bigger UI; avoid decimals (1.5 etc.)
 
 // ====== CONFIG ======
 ui_scale        = 1.0;
@@ -13,8 +14,8 @@ heal_anim_ms    = 14;
 
 lead_conn_count = 0;      // moons start immediately
 row_gap_px      = 6;
-hp_y_offset     = 20;
-skull_y_nudge   = 64;
+hp_y_offset     = 50;
+skull_y_nudge   = 94;
 
 // Vine look
 connector_flipped               = false;

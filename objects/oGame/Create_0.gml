@@ -1,12 +1,18 @@
 /// oGame — Create  (persistent; no closures = no GM1049)
+// Crisp pixels globally
+/// oGame — Create  (persistent; no closures = no GM1049)
 
-// --- Singleton / persistence ---
 persistent = true;
 if (instance_number(oGame) > 1) { instance_destroy(); exit; }
 
-application_surface_enable(true);
+// --- CRISP PIXELS (safe across runtimes) ---
+gpu_set_texfilter(false);          // nearest-neighbor sampling for surfaces + textures
+application_surface_enable(true);  // ensure app surface is on
+// NOTE: Turn OFF “Interpolate colours between pixels” in Project > Options > Graphics.
 
-// --- Init globals for pause/UI (kept from your code) ---
+// (removed: texture_set_interpolation(false);)
+
+// Init globals for pause/UI
 if (!variable_global_exists("paused"))        global.paused = false;
 if (!variable_global_exists("pause_menu_id")) global.pause_menu_id = noone;
 

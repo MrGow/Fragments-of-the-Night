@@ -5,6 +5,8 @@ if (!variable_instance_exists(id, "air_attack_drift"))     air_attack_drift     
 if (!variable_instance_exists(id, "attack_anim_speed"))    attack_anim_speed    = 0.35;
 if (!variable_instance_exists(id, "attack_cooldown"))      attack_cooldown      = 0;
 if (!variable_instance_exists(id, "attack_end_fired"))     attack_end_fired     = false;
+if (!variable_instance_exists(id, "drink_anim_speed"))     drink_anim_speed     = 0.35;
+if (!variable_instance_exists(id, "hurt_anim_speed"))      hurt_anim_speed      = 0.55;
 
 // ---- Safe initializer for global.tm_solids
 if (!variable_global_exists("tm_solids")) global.tm_solids = undefined;
@@ -51,7 +53,6 @@ var k_atk_p  = keyboard_check_pressed(ord("Z"))
             || keyboard_check_pressed(ord("X"))
             || mouse_check_button_pressed(mb_left);
 
-// Heal input
 var k_heal_p = keyboard_check_pressed(ord("E"));
 
 var move_x = kx;
@@ -90,10 +91,44 @@ if (variable_global_exists("_iframes_timer") && global._iframes_timer > 0) {
     image_alpha = 1;
 }
 
-// -------- HEAL (E key) -------------------------------------------
-// Don’t drink while paused; the script enforces lockouts/full-HP/carry too.
+// -------- STATE ENTRIES: DRINK / HURT ----------------------------
+
+// Enter DRINK state when E consumes a flask (and not already locked)
 if (k_heal_p && (!variable_global_exists("paused") || !global.paused)) {
-    script_health_use_flask(); // direct call; no function_exists check
+    // Only start an anim if the heal actually happened
+    var _did_drink = script_health_use_flask(); // returns true on success
+    if (_did_drink && spr_drink != -1) {
+        state        = "drink";
+        sprite_index = spr_drink;
+        image_index  = 0;
+        image_speed  = drink_anim_speed;
+        attack_lock  = true;            // reuse lock to block inputs
+        attack_end_fired = false;
+        // Stop motion while drinking
+        hsp = 0;
+        // (Let gravity run so you land if airborne; or set vsp=0 if you want total freeze)
+    }
+}
+
+// Enter HURT state when damage lands (pulse set by the damage script)
+if (state != "hurt" && state != "drink") {
+    if (variable_global_exists("_hurt_this_step") && global._hurt_this_step) {
+        if (spr_hurt != -1) {
+            state        = "hurt";
+            sprite_index = spr_hurt;
+            image_index  = 0;
+            image_speed  = hurt_anim_speed;
+            attack_lock  = true;
+            attack_end_fired = false;
+            hsp = 0; // tiny stun: no horizontal motion this frame
+        }
+    }
+}
+
+// If in DRINK or HURT, ignore new attack inputs
+var in_lock_state = (state == "drink") || (state == "hurt");
+if (in_lock_state) {
+    atk_p = false;
 }
 
 // -------- ENV / GROUND CHECK (pre-move) --------------------------
@@ -104,7 +139,7 @@ if (on_ground) coyote_timer = coyote_time_frames; else if (coyote_timer > 0) coy
 if (jump_p)    jump_buffer_timer = jump_buffer_time_frames; else if (jump_buffer_timer > 0) jump_buffer_timer--;
 
 // -------- ATTACK TRIGGER (ties cooldown to sprite length) --------
-if (state != "attack" && can_attack && atk_p && attack_cooldown <= 0) {
+if (state != "attack" && !in_lock_state && can_attack && atk_p && attack_cooldown <= 0) {
     if (spr_attack != -1) {
         state            = "attack";
         sprite_index     = spr_attack;
@@ -120,12 +155,14 @@ if (state != "attack" && can_attack && atk_p && attack_cooldown <= 0) {
 }
 
 // -------- HORIZONTAL MOVEMENT ------------------------------------
-var hsp_target = move_speed * move_x;
+var hsp_target = in_lock_state ? 0 : (move_speed * move_x);
 
-if (on_ground && (state == "attack" || attack_lock || attack_lock_frames > 0)) {
+// Lock movement ONLY if grounded & attacking; allow drift in air while attacking
+if (!in_lock_state && on_ground && (state == "attack" || attack_lock || attack_lock_frames > 0)) {
     hsp_target = 0;
 }
 
+// Add a touch of extra drift when attacking mid-air
 if (!on_ground && state == "attack") {
     hsp_target *= air_attack_drift;
 }
@@ -133,7 +170,7 @@ if (!on_ground && state == "attack") {
 hsp = hsp_target;
 
 // -------- EXECUTE JUMP (buffer + coyote) --------------------------
-if (state != "attack" && jump_buffer_timer > 0 && coyote_timer > 0) {
+if (!in_lock_state && state != "attack" && jump_buffer_timer > 0 && coyote_timer > 0) {
     vsp = jump_speed;
     jump_buffer_timer = 0;
     coyote_timer      = 0;
@@ -187,10 +224,10 @@ if (attack_lock_frames > 0) {
 }
 
 // -------- FACING -------------------------------------------------
-if (abs(move_x) > 0.001) image_xscale = (move_x > 0) ? 1 : -1;
+if (!in_lock_state && abs(move_x) > 0.001) image_xscale = (move_x > 0) ? 1 : -1;
 
-// -------- STATE / ANIMATION (non-attack) -------------------------
-if (state != "attack") {
+// -------- STATE / ANIMATION (non-attack/non-locked) --------------
+if (state != "attack" && !in_lock_state) {
     if (!on_ground) {
         if (state != "jump") { state = "jump"; if (spr_jump != -1) sprite_index = spr_jump; image_speed = 0.3; }
     } else if (abs(move_x) > 0.001) {
@@ -200,17 +237,18 @@ if (state != "attack") {
     }
 }
 
-// -------- ATTACK END (one-shot; prefer last frame) ---------------
-if (state == "attack" && !attack_end_fired) {
+// -------- ATTACK / DRINK / HURT END (one-shot; prefer last frame) ---------------
+if ((state == "attack" || state == "drink" || state == "hurt") && !attack_end_fired) {
     var on_last = (image_index >= max(0, image_number - 1));
-    var time_up = (attack_cooldown <= 0);
+    var time_up = (attack_cooldown <= 0); // relevant only for attack
 
-    if (on_last || (time_up && image_number <= 1)) {
+    if (on_last || (time_up && state == "attack" && image_number <= 1)) {
         attack_end_fired = true;
         image_speed = 0;
         image_index = max(0, image_number - 1);
         attack_lock = false;
 
+        // Return to locomotion immediately after the anim
         if (!on_ground) {
             state = "jump"; if (spr_jump != -1) sprite_index = spr_jump; image_speed = 0.3;
         } else if (abs(move_x) > 0.001) {

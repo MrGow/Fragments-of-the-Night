@@ -1,13 +1,13 @@
 {
   "$GMObject":"",
-  "%Name":"oSunPilgrimExplosion",
+  "%Name":"Object20",
   "eventList":[],
   "managed":true,
-  "name":"oSunPilgrimExplosion",
+  "name":"Object20",
   "overriddenProperties":[],
   "parent":{
-    "name":"EnemyObjects",
-    "path":"folders/Objects/EnemyObjects.yy",
+    "name":"UI",
+    "path":"folders/Objects/UI.yy",
   },
   "parentObjectId":null,
   "persistent":false,

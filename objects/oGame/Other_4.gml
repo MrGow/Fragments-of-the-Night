@@ -1,4 +1,6 @@
 /// oGame — Room Start  (normalize timing; safe spawn to ground; enemy sanity)
+global.flask_max = 5;
+global.flask_stock = 5;
 
 game_set_speed(60, gamespeed_fps);   // replaces deprecated room_speed
 
