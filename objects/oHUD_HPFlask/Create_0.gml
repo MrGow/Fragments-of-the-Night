@@ -1,21 +1,24 @@
 /// oHUD_HPFlask — Create
 persistent = true; // keep HUD across rooms
-ui_scale = 1; // or 2 if you want bigger UI; avoid decimals (1.5 etc.)
 
 // ====== CONFIG ======
-ui_scale        = 1.5;
-margin_x        = 16;
-margin_y        = 56;
+// Separate scales: HP bar can stay crisp at 1.0; chalice+digits can be smaller.
+ui_scale_hp      = 1.0;   // skull, vine, moons
+ui_scale_chalice = 0.80;   // chalice + number (try 0.75/0.5/1.0)
+
+// TIP: Non-integer scales may blur pixel art. If it looks soft, use 1.0 or 0.5.
+
+margin_x        = 100;
+margin_y        = 120;
 
 moon_gap_px     = 3;
 anim_speed      = 0.6;
 skull_alert_ms  = 10;
-heal_anim_ms    = 14;
 
 lead_conn_count = 0;      // moons start immediately
-row_gap_px      = 6;
-hp_y_offset     = 50;
-skull_y_nudge   = 120;
+row_gap_px      = 6;      // vertical gap between HP row and chalice row
+hp_y_offset     = 4;      // slight vertical nudge for the HP row
+skull_y_nudge   = 65;     // bring skull down to meet the vine
 
 // Vine look
 connector_flipped               = false;
@@ -37,21 +40,23 @@ spr_flask_use_strip  = sprite_flask_use_strip;
 
 spr_digits           = sprite_digit_strip;
 
-// ====== DERIVED LAYOUT ======
-moon_w   = sprite_get_width(spr_moon_full)  * ui_scale;
-moon_h   = sprite_get_height(spr_moon_full) * ui_scale;
+// ====== DERIVED LAYOUT (per-scale) ======
+// HP bar pieces measured with ui_scale_hp
+moon_w   = sprite_get_width(spr_moon_full)  * ui_scale_hp;
+moon_h   = sprite_get_height(spr_moon_full) * ui_scale_hp;
 
-chal_w   = sprite_get_width(spr_flask_idle) * ui_scale;
-chal_h   = sprite_get_height(spr_flask_idle)* ui_scale;
+skull_w  = sprite_get_width(spr_skull_idle) * ui_scale_hp;
+skull_h  = sprite_get_height(spr_skull_idle)* ui_scale_hp;
 
-skull_w  = sprite_get_width(spr_skull_idle) * ui_scale;
-skull_h  = sprite_get_height(spr_skull_idle)* ui_scale;
+conn_w_raw  = sprite_get_width(spr_connector)      * ui_scale_hp;
+end_w_raw   = sprite_get_width(spr_connector_end)  * ui_scale_hp;
 
-conn_w_raw  = sprite_get_width(spr_connector)      * ui_scale;
-end_w_raw   = sprite_get_width(spr_connector_end)  * ui_scale;
+// Chalice/digits measured with ui_scale_chalice
+chal_w   = sprite_get_width(spr_flask_idle) * ui_scale_chalice;
+chal_h   = sprite_get_height(spr_flask_idle)* ui_scale_chalice;
 
-digit_w  = sprite_get_width(spr_digits)  * ui_scale;
-digit_h  = sprite_get_height(spr_digits) * ui_scale;
+digit_w  = sprite_get_width(spr_digits)  * ui_scale_chalice;
+digit_h  = sprite_get_height(spr_digits) * ui_scale_chalice;
 digit_gap= 0;
 
 base_x = margin_x;
@@ -64,9 +69,8 @@ max_hp_cache  = (variable_global_exists("max_hp") ? global.max_hp : 1);
 
 skull_alert_t = 0;
 
-// Drink timing book-keeping (NEW)
+// Drink timing book-keeping
 prev_drink_timer = (variable_global_exists("_drinking_timer") ? global._drinking_timer : 0);
-// Default peak: use drink lockout if present, else use frames in strip (any non-zero)
 drink_timer_max  = (variable_global_exists("_drink_lockout") ? max(1, global._drink_lockout)
                                                              : max(1, sprite_get_number(spr_flask_use_strip)));
 
@@ -82,3 +86,4 @@ for (var i = 0; i < max_hp_cache; i++) {
     if (i < display_hp) { moon_state[i] = 1; moon_frame[i] = 0; moon_dir[i] = 0; }
     else { moon_state[i] = 0; moon_frame[i] = last; moon_dir[i] = 0; }
 }
+

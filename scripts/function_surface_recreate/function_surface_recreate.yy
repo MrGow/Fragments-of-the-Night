@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"function_surface_recreate",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"function_surface_recreate",
+  "parent":{
+    "name":"PostFX",
+    "path":"folders/Scripts/PostFX.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

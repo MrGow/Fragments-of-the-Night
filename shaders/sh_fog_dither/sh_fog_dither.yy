@@ -1,0 +1,12 @@
+{
+  "$GMShader":"",
+  "%Name":"sh_fog_dither",
+  "name":"sh_fog_dither",
+  "parent":{
+    "name":"Shaders",
+    "path":"folders/Shaders.yy",
+  },
+  "resourceType":"GMShader",
+  "resourceVersion":"2.0",
+  "type":1,
+}

@@ -1,0 +1,12 @@
+{
+  "$GMShader":"",
+  "%Name":"sh_vign_grain",
+  "name":"sh_vign_grain",
+  "parent":{
+    "name":"Shaders",
+    "path":"folders/Shaders.yy",
+  },
+  "resourceType":"GMShader",
+  "resourceVersion":"2.0",
+  "type":1,
+}

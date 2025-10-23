@@ -2,13 +2,6 @@
 gui_w = display_get_gui_width();
 gui_h = display_get_gui_height();
 
-function __prep_leg_range(_from, _to) {
-    leg_elapsed = 0;
-    end_hold    = 0;
-    img_start   = _from;
-    img_end     = _to;
-}
-
 if (phase == Phase.Switch) {
     // -------- Spawn/tag placement (generic fallback) --------
     var _tag_local = global._transition_spawn_tag;
@@ -45,18 +38,10 @@ if (phase == Phase.Switch) {
         _spawn_tag_tmp = undefined;
     }
 
-    // -------- Next leg --------
-    var frames = max(1, sprite_get_number(sprite_index));
-    if (play_mode == PlayMode.ForwardThenReverse) {
-        // Reverse-shatter IN (end→start) with slower IN duration
-        __prep_leg_range(frames - 1, 0);
-        leg_frames  = max(1, ceil(room_speed * effect_time_in)); // slower IN
-        leg_elapsed = 0;
-        phase       = Phase.In;
-    } else {
-        // No IN leg → use the longer settle hold to hide cam snap
-        phase         = Phase.Hold;
-        hold_alpha    = 1.0;
-        settle_frames = max(1, ceil(room_speed * settle_time_sec));
-    }
+    // -------- NEW: mask-until-stable setup --------
+    // Start fully veiled to cover load & snap; wait for camera to settle.
+    phase          = Phase.MaskUntilStable;
+    hold_alpha     = 1.0;                            // full black veil
+    cam_stable_n   = -1;                             // prime first-tick sampling
+    cam_timeout    = max(1, stable_timeout_frames);  // safety timeout
 }

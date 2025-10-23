@@ -1,11 +1,30 @@
 /// oMirrorTransition - Step
+// Ensure the cooldown exists (avoid type warnings)
+if (!variable_global_exists("_transition_cooldown_f")) global._transition_cooldown_f = 0;
 if (global._transition_cooldown_f > 0) global._transition_cooldown_f--;
 
-// Smooth weighty motion
-function __ease_in_out_cubic(x) {
-    return (x < 0.5)
-        ? 4.0 * x * x * x
-        : 1.0 - power(-2.0 * x + 2.0, 3.0) * 0.5;
+// Kick-off requested by the script (no direct function calls)
+if (start_requested) {
+    start_requested = false;
+    if (!global._transition_busy && global._transition_cooldown_f <= 0 && phase == Phase.Idle) {
+        global._transition_busy = true;
+        phase       = Phase.Out;
+        leg_frames  = 0;
+        leg_elapsed = 0;
+        end_hold    = 0;
+        image_speed = 0;
+    }
+}
+
+// cubic ease without power(); avoid built-in names
+function __ease_in_out_cubic(tval) {
+    if (tval < 0.5) {
+        return 4.0 * tval * tval * tval;
+    } else {
+        var yy = (-2.0 * tval + 2.0);
+        yy = yy * yy * yy;
+        return 1.0 - (yy * 0.5);
+    }
 }
 
 function __finish_and_unlock() {
@@ -18,34 +37,34 @@ function __finish_and_unlock() {
 switch (phase) {
     case Phase.Out:
     {
-        // Set up subimage range & duration on first tick
         if (leg_elapsed == 0 && end_hold == 0) {
+            if (sprite_index == -1) { show_debug_message("[oMirrorTransition] No sprite assigned."); __finish_and_unlock(); break; }
             var frames = max(1, sprite_get_number(sprite_index));
+
             if (play_mode == PlayMode.ForwardOnly || play_mode == PlayMode.ForwardThenReverse) {
-                img_start = 0;            // shatter forward
+                img_start = 0;
                 img_end   = frames - 1;
             } else {
-                img_start = frames - 1;   // reverse build
+                img_start = frames - 1;
                 img_end   = 0;
             }
-            img_start = clamp(img_start, 0, frames - 1);
-            img_end   = clamp(img_end,   0, frames - 1);
-
-            // OUT duration (slower)
+            img_start   = clamp(img_start, 0, frames - 1);
+            img_end     = clamp(img_end,   0, frames - 1);
             leg_frames  = max(1, ceil(room_speed * effect_time_out));
             leg_elapsed = 0;
         }
 
-        // Advance leg (time → eased subimage)
         leg_elapsed++;
         var t  = clamp(leg_elapsed / max(1, leg_frames), 0, 1);
         var te = __ease_in_out_cubic(t);
         image_index = lerp(img_start, img_end, te);
 
-        // End with tiny frame-hold to show final frame
         if (t >= 1.0) {
             if (end_hold < end_hold_len) end_hold++;
-            else phase = Phase.Switch;
+            else {
+                shake_timer = max(shake_timer, round(room_speed * 0.10));
+                phase = Phase.Switch;
+            }
         }
     }
     break;
@@ -55,7 +74,7 @@ switch (phase) {
         if (room_exists(target_room)) {
             global._transition_spawn_tag = target_spawn;
             room_goto(target_room);
-            // Next leg decided in Room Start
+            // Next leg set in Room Start
         } else {
             show_debug_message("[oMirrorTransition] ERROR: invalid target_room " + string(target_room));
             __finish_and_unlock();
@@ -63,22 +82,59 @@ switch (phase) {
     }
     break;
 
+    case Phase.MaskUntilStable:
+    {
+        var cam = view_camera[0];
+        var cx = camera_get_view_x(cam);
+        var cy = camera_get_view_y(cam);
+
+        if (cam_timeout > 0) cam_timeout--;
+
+        if (cam_stable_n < 0) {
+            cam_prev_x   = cx;
+            cam_prev_y   = cy;
+            cam_stable_n = 0;
+        }
+
+        var dx = abs(cx - cam_prev_x);
+        var dy = abs(cy - cam_prev_y);
+        var moved = (dx > stable_epsilon_px) || (dy > stable_epsilon_px);
+
+        if (moved) {
+            cam_stable_n = 0;
+            cam_prev_x = cx; cam_prev_y = cy;
+        } else {
+            cam_stable_n++;
+        }
+
+        if (cam_stable_n >= stable_required_frames || cam_timeout <= 0) {
+            if (sprite_index == -1) { __finish_and_unlock(); break; }
+            var frames = max(1, sprite_get_number(sprite_index));
+            img_start   = frames - 1;
+            img_end     = 0;
+            leg_frames  = max(1, ceil(room_speed * effect_time_in));
+            leg_elapsed = 0;
+            end_hold    = 0;
+            phase       = Phase.In;
+        }
+    }
+    break;
+
     case Phase.In:
     {
-        // Reverse leg already configured in Room Start (incl. leg_frames for IN)
         leg_elapsed++;
-        var t  = clamp(leg_elapsed / max(1, leg_frames), 0, 1);
-        var te = __ease_in_out_cubic(t);
-        image_index = lerp(img_start, img_end, te);
+        var t2  = clamp(leg_elapsed / max(1, leg_frames), 0, 1);
+        var te2 = __ease_in_out_cubic(t2);
+        image_index = lerp(img_start, img_end, te2);
 
-        if (t >= 1.0) {
+        if (t2 >= 1.0) {
             if (end_hold < end_hold_len) {
                 end_hold++;
             } else {
-                // After reverse IN, brief post-IN hold to hide any late snap
-                phase            = Phase.Hold;
-                hold_alpha       = 1.0;
-                settle_frames    = max(1, ceil(room_speed * post_in_settle_time_sec));
+                shake_timer     = max(shake_timer, round(room_speed * 0.06));
+                phase           = Phase.Hold;
+                hold_alpha      = 1.0;
+                settle_frames   = max(1, ceil(room_speed * settle_time_sec));
             }
         }
     }
@@ -86,14 +142,12 @@ switch (phase) {
 
     case Phase.Hold:
     {
-        // Fade veil (ease-out) so it feels smooth
         if (settle_frames > 0) {
-            var denom = max(1, ceil(room_speed * ((hold_alpha >= 1.0 && phase == Phase.Hold) ? post_in_settle_time_sec : settle_time_sec)));
+            var denom = max(1, ceil(room_speed * settle_time_sec));
             var tt = 1.0 - (settle_frames / denom);
             hold_alpha = max(0, 1.0 - (tt * tt));
             settle_frames--;
         } else {
-            // Reset + unlock
             settle_frames = ceil(room_speed * settle_time_sec);
             hold_alpha    = 0.0;
             __finish_and_unlock();
