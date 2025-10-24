@@ -51,6 +51,21 @@ function __on_ground_check() {
     return __tile_solid_at(l + eps, b + 1) || __tile_solid_at(r - eps, b + 1);
 }
 
+// ---------- Sprite switch helper: preserve FEET position ----------
+function __set_sprite_keep_feet(_spr, _speed) {
+    if (_spr == -1) return;
+    var cur_yoff = sprite_get_yoffset(sprite_index);
+    var cur_bot  = sprite_get_bbox_bottom(sprite_index);
+    var feet_y   = y - cur_yoff + cur_bot;
+
+    sprite_index = _spr;
+    if (!is_undefined(_speed)) image_speed = _speed;
+
+    var new_yoff = sprite_get_yoffset(sprite_index);
+    var new_bot  = sprite_get_bbox_bottom(sprite_index);
+    y = feet_y - (new_bot - new_yoff);
+}
+
 // -------- INPUT (keyboard wins; then oInput) --------
 var kx = (keyboard_check(vk_right) || keyboard_check(ord("D")))
        - (keyboard_check(vk_left)  || keyboard_check(ord("A")));
@@ -104,7 +119,8 @@ if (_new_hurt && state != "drink") {
 
     state = "hurt";
     if (variable_instance_exists(id,"spr_hurt") && spr_hurt != -1) {
-        sprite_index = spr_hurt; image_index = 0; image_speed = hurt_anim_speed;
+        __set_sprite_keep_feet(spr_hurt, hurt_anim_speed);
+        image_index = 0;
     }
     hsp = 0;
 
@@ -127,7 +143,6 @@ var _is_attack_sprite =
 
 if (_is_attack_sprite) {
     state = "attack";
-    image_speed = 0; // driven by oPlayerCombat
 }
 
 if (_is_attack_sprite) {
@@ -137,7 +152,6 @@ if (_is_attack_sprite) {
         attack_release_linger++;
         if (attack_release_linger >= 2) {
             attack_release_linger = 0;
-            // locomotion handoff happens below when combo is inactive
         }
     } else {
         attack_release_linger = 0;
@@ -153,41 +167,104 @@ var attacking_now  = _is_attack_sprite || pc_combo_active;
 // -------- ENV / GROUND CHECK (pre-move) ------------------
 var on_ground = __on_ground_check();
 
-// ===================== LEDGE: ENTER/MAINTAIN/PULL (revised) =====================
-// ===================== LEDGE: ENTER/MAINTAIN/PULL (parameterized) =====================
-// Tunables for this frame
-var GRAB_MAX_GAP_PX = 3;   // max distance from wall to allow a grab
-var HEAD_CLEAR_PX   = 6;   // empty space above head needed to hang
-var PULL_FWD_X_PX   = 12;  // forward distance during pull
-var PULL_UP_Y_PX    = 14;  // upward distance during pull
 
+// ===================== LEDGE: ENTER/MAINTAIN/PULL (robust + regrab cooldown) =====================
+// Tunables for 43x26 mask, 16px tiles
+var GRAB_MAX_GAP_PX   = 1;
+var HEAD_CLEAR_PX     = 9;
+var MAX_LIP_SEARCH_PX = 16;
+var MAX_DROP_TO_LIP   = 2;
+var MAX_RISE_TO_LIP   = 12;
+var PULL_FWD_X_PX     = 11;
+var PULL_UP_Y_PX      = 18;
+var PULL_TIME_S       = 0.28;
+var PULL_SEGMENTS     = 8;
+var REGRAB_COOLDOWN   = 10; // frames
+
+// Ensure vars
+if (!variable_instance_exists(id,"ledge_snap_y"))     ledge_snap_y   = y;
+if (!variable_instance_exists(id,"ledge_dir"))        ledge_dir      = 1;
+if (!variable_instance_exists(id,"ledge_t"))          ledge_t        = 0;
+if (!variable_instance_exists(id,"ledge_pull_time"))  ledge_pull_time= PULL_TIME_S;
+if (!variable_instance_exists(id,"ledge_start_x"))    ledge_start_x  = x;
+if (!variable_instance_exists(id,"ledge_start_y"))    ledge_start_y  = y;
+if (!variable_instance_exists(id,"ledge_target_x"))   ledge_target_x = x;
+if (!variable_instance_exists(id,"ledge_target_y"))   ledge_target_y = y;
+if (!variable_instance_exists(id,"ledge_enabled"))    ledge_enabled  = true;
+if (!variable_instance_exists(id,"ledge_regrab_cd"))  ledge_regrab_cd= 0;
+if (ledge_regrab_cd > 0) ledge_regrab_cd--;
+
+// Local helpers
 function __solid_xy(_x, _y) {
     return (!is_undefined(global.tm_solids)) && (tilemap_get_at_pixel(global.tm_solids, _x, _y) != 0);
 }
-
-// Find nearest wall gap (0.._gap_max) at chest height on _dir side.
-// Returns -1 if not found.
-function __nearest_wall_gap(_dir, _chest_y, _gap_max) {
+function __nearest_wall_gap(_dir, _probe_y, _gap_max) {
     if (_dir > 0) {
-        for (var dx = 0; dx <= _gap_max; dx++) {
-            var px = bbox_right + dx;
-            if (__solid_xy(px, _chest_y)) return dx;
-        }
+        for (var dx = 0; dx <= _gap_max; dx++) if (__solid_xy(bbox_right + dx, _probe_y)) return dx;
     } else {
-        for (var dxn = 0; dxn <= _gap_max; dxn++) {
-            var pxl = bbox_left - dxn;
-            if (__solid_xy(pxl, _chest_y)) return dxn;
-        }
+        for (var dxn = 0; dxn <= _gap_max; dxn++) if (__solid_xy(bbox_left - dxn, _probe_y)) return dxn;
     }
     return -1;
 }
+// Prefer higher lips first
+function __find_lip_y(_wall_x, _chest_y, _search_px) {
+    for (var oy = -_search_px; oy <= _search_px; oy++) {
+        var yy_air   = _chest_y + oy;
+        var yy_solid = yy_air + 1;
+        if (!__solid_xy(_wall_x, yy_air) && __solid_xy(_wall_x, yy_solid)) return yy_air;
+    }
+    return undefined;
+}
+function __is_valid_lip(_dir, _gap_max, _head_clear, _search_px, _max_drop, _max_rise) {
+    var h = bbox_bottom - bbox_top;
+    var chest_y = bbox_top + clamp(round(h * 0.35), 8, 14);
+    var feet_y  = bbox_bottom + 1;
 
-// Try to enter ledge grab; snaps X flush, keeps current Y (no big teleports)
-function __try_ledge_grab(_dir, _gap_max, _head_clear, _pull_fwd, _pull_up) {
+    var gap = __nearest_wall_gap(_dir, chest_y, _gap_max);
+    if (gap < 0) return [false, 0, 0];
+
+    var wall_x = (_dir > 0) ? (bbox_right + gap) : (bbox_left - gap);
+
+    var lip_y = __find_lip_y(wall_x, chest_y, _search_px);
+    if (is_undefined(lip_y)) return [false, 0, 0];
+
+    var dY = lip_y - chest_y;
+    if (dY > _max_drop) return [false, 0, 0];
+    if (dY < -_max_rise) return [false, 0, 0];
+
+    if (__solid_xy(wall_x, feet_y)) return [false, 0, 0];
+    if (__solid_xy(wall_x, chest_y - _head_clear)) return [false, 0, 0];
+
+    return [true, wall_x, lip_y];
+}
+// Find a *standing* Y at tx: rise a bit, then drop to first ground
+function __solve_standing_y(_tx, _pull_up) {
+    var max_drop = 32;
+    var yy = y - _pull_up - 2;
+
+    // small rise if we start embedded
+    for (var up = 0; up < 8; up++) {
+        if (!__rect_hits_solid(_tx - x, (yy - up) - y)) { yy -= up; break; }
+    }
+    // drop until ground
+    var d = 0;
+    while (d < max_drop) {
+        if (__rect_hits_solid(_tx - x, (yy + 1) - y)) break;
+        yy += 1; d++;
+    }
+    return yy;
+}
+function __resolve_small_embed() {
+    var tries = 6;
+    while (__rect_hits_solid(0,0) && tries-- > 0) y -= 1;
+}
+
+// Attempt a ledge grab (all tunables passed IN)
+function __try_ledge_grab(_dir, _gap_max, _head_clear, _search_px, _max_drop, _max_rise, _pull_fwd, _pull_up) {
     if (!ledge_enabled) return false;
+    if (ledge_regrab_cd > 0) return false;
     if (state == "ledge" || state == "ledge_pull") return false;
 
-    // Don’t grab while attacking/combos
     var sprA = asset_get_index("spriteSwordAttackA");
     var sprB = asset_get_index("spriteSwordAttackB");
     var sprC = asset_get_index("spriteSwordAttackC");
@@ -200,127 +277,125 @@ function __try_ledge_grab(_dir, _gap_max, _head_clear, _pull_fwd, _pull_up) {
         pc_combo_active;
     if (is_attack_now) return false;
 
-    // Falling & not grounded
     if (vsp <= 0.25) return false;
     if (__on_ground_check()) return false;
 
-    // Probe positions
-    var chest_y = bbox_top + 14;
-    var head_y  = bbox_top + _head_clear;
-    var feet_y  = bbox_bottom + 1;
+    var vr = __is_valid_lip(_dir, _gap_max, _head_clear, _search_px, _max_drop, _max_rise);
+    if (!vr[0]) return false;
+    var wall_x = vr[1];
 
-    // 1) Need a wall near chest
-    var found_gap = __nearest_wall_gap(_dir, chest_y, _gap_max);
-    if (found_gap < 0) return false;
+    // Snap X flush to wall (1px safety), no Y move
+    var deltaX = (_dir > 0) ? (wall_x - 1) - bbox_right : (wall_x + 1) - bbox_left;
+    if (!__rect_hits_solid(deltaX, 0)) x += deltaX;
 
-    // 2) Space above head next to the wall
-    var wall_x = (_dir > 0) ? (bbox_right + found_gap) : (bbox_left - found_gap);
-    if (__solid_xy(wall_x, head_y)) return false;
-
-    // 3) No floor directly in front of feet
-    if (__solid_xy(wall_x, feet_y)) return false;
-
-    // Snap flush to wall with 1px safety gap
-    var dx_to_flush = (_dir > 0)
-        ? ((bbox_right + found_gap) - (bbox_right + 1))   // move left by (found_gap-1)
-        : ((bbox_left  - found_gap) - (bbox_left  - 1));  // move right by (found_gap-1)
-    x -= dx_to_flush;
-
-    // Enter hang
-    state     = "ledge";
-    ledge_dir = _dir;
+    state       = "ledge";
+    ledge_dir   = _dir;
     hsp = 0; vsp = 0;
 
-    if (spr_ledge_grab != -1) { sprite_index = spr_ledge_grab; image_speed = 0.25; }
+    if (spr_ledge_grab != -1) { __set_sprite_keep_feet(spr_ledge_grab, 0.25); image_index = 0; }
 
     ledge_start_x = x;  ledge_start_y = y;
-    // Default pull target
-    ledge_target_x = x + ledge_dir * _pull_fwd;
-    ledge_target_y = y - _pull_up;
+    ledge_target_x = x + ledge_dir * _pull_fwd; // provisional
+    ledge_target_y = y - _pull_up;              // provisional
+    ledge_snap_y   = y;
 
     return true;
 }
 
+// --- LEDGE STATE MACHINE ---
 if (ledge_enabled) {
     if (state == "ledge") {
+        // Maintain hang
+        y = ledge_snap_y;
         hsp = 0; vsp = 0;
         image_xscale = (ledge_dir > 0) ? 1 : -1;
-        if (spr_ledge_grab != -1 && sprite_index != spr_ledge_grab) { sprite_index = spr_ledge_grab; image_speed = 0.25; }
+        if (spr_ledge_grab != -1 && sprite_index != spr_ledge_grab) __set_sprite_keep_feet(spr_ledge_grab, 0.25);
 
-        // Drop
+        // Drop off
         if (k_down || (move_x != 0 && sign(move_x) == -ledge_dir)) {
-            state = "jump"; vsp = 1.5;
+            state = "jump"; vsp = 1.5; ledge_regrab_cd = REGRAB_COOLDOWN;
         }
-        // Pull up
+        // Pull up (Jump)
         else if (jump_p) {
-            state = "ledge_pull";
-            if (spr_ledge_pull != -1) { sprite_index = spr_ledge_pull; image_index = 0; image_speed = 0.6; }
-            ledge_t = 0;
+            // Solve a collision-safe stand target on top
+            var tx = x + ledge_dir * PULL_FWD_X_PX;
+            var ty = __solve_standing_y(tx, PULL_UP_Y_PX);
 
-            // Derive duration from anim if available
+            // Fallback if somehow blocked
+            if (__rect_hits_solid(tx - x, ty - y)) {
+                tx = x + ledge_dir * (PULL_FWD_X_PX - 4);
+                ty = y - (PULL_UP_Y_PX - 2);
+            }
+
+            state = "ledge_pull";
+            image_index = 0;
+            if (spr_ledge_pull != -1) __set_sprite_keep_feet(spr_ledge_pull, 0.65);
+
+            ledge_t = 0;
+            ledge_start_x = x; ledge_start_y = y;
+            ledge_target_x = tx; ledge_target_y = ty;
+
             var frames_pull = max(1, image_number);
-            var dur_s = (image_speed > 0) ? (frames_pull / (image_speed * room_speed)) : ledge_pull_time;
+            var dur_s = (image_speed > 0) ? (frames_pull / (image_speed * room_speed)) : PULL_TIME_S;
             ledge_pull_time = max(0.15, dur_s);
 
-            // Choose a collision-safe target (shorten path if blocked)
-            var tx = x + ledge_dir * PULL_FWD_X_PX;
-            var ty = y - PULL_UP_Y_PX;
-            var ok = true;
-            for (var step = 0; step <= 6; step++) {
-                var try_x = x + ledge_dir * max(0, PULL_FWD_X_PX - step * 2);
-                var try_y = y - max(0, PULL_UP_Y_PX  - step * 2);
-                var dx = try_x - x;
-                var dy = try_y - y;
-                if (!__rect_hits_solid(dx, dy)) { tx = try_x; ty = try_y; ok = true; break; }
-                ok = false;
-            }
-            ledge_start_x = x; ledge_start_y = y;
-            ledge_target_x = ok ? tx : x;
-            ledge_target_y = ok ? ty : y;
+            ledge_regrab_cd = REGRAB_COOLDOWN; // block immediate re-grab during pull
         }
     }
     else if (state == "ledge_pull") {
-        // Timed pull with continuous collision safety
+        // Interpolate with INCREMENTAL collision: step from last safe point
         ledge_t += 1 / room_speed;
         var t = clamp(ledge_t / max(0.001, ledge_pull_time), 0, 1);
 
-        var px = lerp(ledge_start_x, ledge_target_x, t);
-        var py = lerp(ledge_start_y, ledge_target_y, t);
+        var prevx = x, prevy = y;
+        var steps = max(2, PULL_SEGMENTS);
+        var blocked = false;
 
-        var segs = 4, safe_x = x, safe_y = y, blocked = false;
-        for (var s = 1; s <= segs; s++) {
-            var tt = t * (s / segs);
+        for (var s = 1; s <= steps; s++) {
+            var tt = t * (s / steps);
             var ix = lerp(ledge_start_x, ledge_target_x, tt);
             var iy = lerp(ledge_start_y, ledge_target_y, tt);
-            var dx = ix - x;
-            var dy = iy - y;
+            var dx = ix - prevx;
+            var dy = iy - prevy;
             if (__rect_hits_solid(dx, dy)) { blocked = true; break; }
-            safe_x = ix; safe_y = iy;
+            prevx = ix; prevy = iy;
         }
-        if (blocked) { x = safe_x; y = safe_y; } else { x = px; y = py; }
+        x = prevx; y = prevy;
 
         hsp = 0; vsp = 0;
 
+        // Finish either on time or when anim ends
         var finished = (image_speed == 0) ? (t >= 1.0) : (image_index >= image_number - 1.0);
-        if (t >= 1.0 || finished) {
+        if (t >= 1.0 || finished || blocked) {
+            // Final safety: snap feet to ground at current X
+            var stand_y = __solve_standing_y(x, 0);
+            if (!__rect_hits_solid(0, stand_y - y)) y = stand_y;
+            __resolve_small_embed();
+
             state = "idle";
-            if (spr_idle != -1) { sprite_index = spr_idle; image_speed = 0.4; }
+            if (spr_idle != -1) __set_sprite_keep_feet(spr_idle, 0.4);
+
+            ledge_regrab_cd = REGRAB_COOLDOWN; // short cooldown so we don't instantly re-grab
         }
     }
     else {
+        // Try a grab only when near a wall; use facing if no input
         var wish_dir = (move_x != 0) ? sign(move_x) : sign(image_xscale);
         if (wish_dir == 0) wish_dir = 1;
-        __try_ledge_grab(wish_dir, GRAB_MAX_GAP_PX, HEAD_CLEAR_PX, PULL_FWD_X_PX, PULL_UP_Y_PX);
+        __try_ledge_grab(
+            wish_dir,
+            GRAB_MAX_GAP_PX, HEAD_CLEAR_PX, MAX_LIP_SEARCH_PX,
+            MAX_DROP_TO_LIP, MAX_RISE_TO_LIP,
+            PULL_FWD_X_PX, PULL_UP_Y_PX
+        );
     }
 }
-// =================== END LEDGE (parameterized) ===================
-
-
 // =================== END LEDGE ===================
 
+
 // ----------------- Locks / state booleans (update with ledge) -----------------
-in_lock_state  = in_lock_state || (state == "ledge") || (state == "ledge_pull");
 var ledge_now  = (state == "ledge") || (state == "ledge_pull");
+in_lock_state  = in_lock_state || ledge_now;
 
 // -------- COYOTE & JUMP BUFFER TIMERS --------------------
 if (!variable_instance_exists(id, "coyote_time_frames"))      coyote_time_frames = 6;
@@ -333,17 +408,8 @@ if (jump_p)    jump_buffer_timer = jump_buffer_time_frames; else if (jump_buffer
 
 // -------- HORIZONTAL MOVEMENT ----------------------------
 var hsp_target = in_lock_state ? 0 : (move_x * move_speed);
-
-// Only lock grounded movement when actually attacking right now (or ledge states)
-if (!in_lock_state && on_ground && (pc_combo_active || ledge_now)) {
-    hsp_target = 0;
-}
-
-// Add a touch of extra drift when attacking mid-air
-if (!on_ground && pc_combo_active) {
-    hsp_target *= air_attack_drift;
-}
-
+if (!in_lock_state && on_ground && (pc_combo_active || ledge_now)) hsp_target = 0;
+if (!on_ground && pc_combo_active) hsp_target *= air_attack_drift;
 hsp = ledge_now ? 0 : hsp_target;
 
 // -------- EXECUTE JUMP (buffer + coyote) -----------------
@@ -371,26 +437,18 @@ if (vsp > max_fall) vsp = max_fall;
 if (hsp != 0) {
     var sx = sign(hsp);
     var mx = abs(hsp);
-    repeat (floor(mx)) {
-        if (!__rect_hits_solid(sx, 0)) x += sx; else { hsp = 0; break; }
-    }
+    repeat (floor(mx)) { if (!__rect_hits_solid(sx, 0)) x += sx; else { hsp = 0; break; } }
     var fracx = mx - floor(mx);
-    if (fracx > 0 && hsp != 0) {
-        if (!__rect_hits_solid(sx * fracx, 0)) x += sx * fracx; else hsp = 0;
-    }
+    if (fracx > 0 && hsp != 0) { if (!__rect_hits_solid(sx * fracx, 0)) x += sx * fracx; else hsp = 0; }
 }
 
 // -------- COLLISIONS (V) — tilemap -----------------------
 if (!ledge_now && vsp != 0) {
     var sy = sign(vsp);
     var my = abs(vsp);
-    repeat (floor(my)) {
-        if (!__rect_hits_solid(0, sy)) y += sy; else { vsp = 0; break; }
-    }
+    repeat (floor(my)) { if (!__rect_hits_solid(0, sy)) y += sy; else { vsp = 0; break; } }
     var fracy = my - floor(my);
-    if (fracy > 0 && vsp != 0) {
-        if (!__rect_hits_solid(0, sy * fracy)) y += sy * fracy; else vsp = 0;
-    }
+    if (fracy > 0 && vsp != 0) { if (!__rect_hits_solid(0, sy * fracy)) y += sy * fracy; else vsp = 0; }
 }
 
 // -------- RECHECK GROUND (post-move) ---------------------
@@ -401,17 +459,17 @@ if (!in_lock_state && !pc_combo_active && !ledge_now && abs(move_x) > 0.001 && !
     image_xscale = (move_x > 0) ? 1 : -1;
 }
 
-// -------- LOCOMOTION STATE (ungated by lingering attack sprite) ---
+// -------- LOCOMOTION STATE --------------------------------
 if (!pc_combo_active && !ledge_now && !_skip_overrides_this_frame) {
     if (!in_lock_state) {
         if (!on_ground) {
-            if (variable_instance_exists(id,"spr_jump") && spr_jump != -1) { state = "jump"; sprite_index = spr_jump; image_speed = 0.3; }
+            if (variable_instance_exists(id,"spr_jump") && spr_jump != -1) { __set_sprite_keep_feet(spr_jump, 0.3); state = "jump"; }
             else state = "jump";
         } else if (abs(move_x) > 0.001) {
-            if (variable_instance_exists(id,"spr_run") && spr_run != -1)  { state = "run";  sprite_index = spr_run;  image_speed = 1.2; }
+            if (variable_instance_exists(id,"spr_run") && spr_run != -1)  { __set_sprite_keep_feet(spr_run, 1.2); state = "run"; }
             else state = "run";
         } else {
-            if (variable_instance_exists(id,"spr_idle") && spr_idle != -1) { state = "idle"; sprite_index = spr_idle; image_speed = 0.4; }
+            if (variable_instance_exists(id,"spr_idle") && spr_idle != -1) { __set_sprite_keep_feet(spr_idle, 0.4); state = "idle"; }
             else state = "idle";
         }
     }
@@ -422,13 +480,13 @@ if (state == "hurt" && hurt_lock_timer > 0 && !_skip_overrides_this_frame) {
     hurt_lock_timer--;
     if (hurt_lock_timer <= 0) {
         if (!on_ground) {
-            if (variable_instance_exists(id,"spr_jump") && spr_jump != -1) { state = "jump"; sprite_index = spr_jump; image_speed = 0.3; }
+            if (variable_instance_exists(id,"spr_jump") && spr_jump != -1) { __set_sprite_keep_feet(spr_jump, 0.3); state = "jump"; }
             else state = "jump";
         } else if (abs(move_x) > 0.001) {
-            if (variable_instance_exists(id,"spr_run") && spr_run != -1)  { state = "run";  sprite_index = spr_run;  image_speed = 1.2; }
+            if (variable_instance_exists(id,"spr_run") && spr_run != -1)  { __set_sprite_keep_feet(spr_run, 1.2); state = "run"; }
             else state = "run";
         } else {
-            if (variable_instance_exists(id,"spr_idle") && spr_idle != -1) { state = "idle"; sprite_index = spr_idle; image_speed = 0.4; }
+            if (variable_instance_exists(id,"spr_idle") && spr_idle != -1) { __set_sprite_keep_feet(spr_idle, 0.4); state = "idle"; }
             else state = "idle";
         }
     }

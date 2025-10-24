@@ -45,7 +45,7 @@ jump_buffer_timer       = 0;
 can_attack              = true;
 attack_cooldown         = 0;
 attack_end_fired        = false;
-attack_anim_speed       = 0.35;
+attack_anim_speed       = 1;
 air_attack_drift        = 1.15;
 
 // Legacy flag some code touches
