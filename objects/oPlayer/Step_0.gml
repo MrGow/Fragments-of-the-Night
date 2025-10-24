@@ -178,7 +178,7 @@ var MAX_RISE_TO_LIP   = 12;
 var PULL_FWD_X_PX     = 11;
 var PULL_UP_Y_PX      = 18;
 var PULL_TIME_S       = 0.28;
-var PULL_SEGMENTS     = 8;
+var PULL_SEGMENTS     = 10;
 var REGRAB_COOLDOWN   = 10; // frames
 
 // Ensure vars
