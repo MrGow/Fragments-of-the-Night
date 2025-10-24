@@ -33,12 +33,9 @@ if (!instance_exists(owner)) { if (instance_exists(oPlayer)) owner = instance_ne
 x = owner.x; y = owner.y;
 
 // ===== FAILSAFE UNLOCK =====
-// If we’re not in a combo and no up-slash lock is running, make 100% sure the
-// player isn’t stuck in “attack” locks from a previous swing.
 if (!combo_active && up_timer <= 0) {
     owner.pc_combo_active = false;
     owner.attack_lock     = false;
-    // (Do NOT force sprite/state here; oPlayer handles release/locomotion)
 }
 // ===========================
 
@@ -71,7 +68,8 @@ if (up_timer > 0) {
                 owner.sprite_index = spr_attack_up;
                 owner.image_index  = keep_idx_up;
             }
-            var frames_up = max(1, sprite_get_number(spr_attack_up));
+            // Type-safe: read frames from owner's current sprite
+            var frames_up = max(1, sprite_get_number(owner.sprite_index));
             var step_up   = frames_up / (max(0.001, attack_cd_s) * room_speed);
             owner.image_speed = 0;          // ENGINE OFF
             owner.image_index += step_up;   // manual advance
@@ -106,7 +104,8 @@ if (combo_active) {
     }
 
     // MANUAL advance; ENGINE OFF
-    var frames_now = max(1, sprite_get_number(current_spr));
+    // Type-safe: read frames from owner's current sprite (already set to current_spr)
+    var frames_now = max(1, sprite_get_number(owner.sprite_index));
     var step_now   = frames_now / (max(0.001, combo_dur_s) * room_speed);
     owner.image_speed = 0;
     owner.image_index += step_now;
@@ -139,6 +138,7 @@ if (combo_active) {
         spawned_this_swing = false;
 
         if (queued_next) {
+            // start next immediately
             combo_index = (combo_index + 1) mod 3;
             combo_active = true;
             queued_next  = false;
@@ -156,7 +156,8 @@ if (combo_active) {
             if (spr2 != -1) {
                 owner.sprite_index = spr2;
 
-                var frames2 = max(1, sprite_get_number(spr2));
+                // Type-safe frame count from owner's sprite
+                var frames2 = max(1, sprite_get_number(owner.sprite_index));
                 var step2   = frames2 / (max(0.001, combo_dur_s) * room_speed);
                 var bias2   = clamp(frames2 * warm_ratio, 0, max(0, frames2 - 1));
                 owner.image_speed = 0;

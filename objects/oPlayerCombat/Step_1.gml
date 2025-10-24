@@ -71,7 +71,8 @@ if (pressed_any && !combo_active && up_timer <= 0 && attack_cd <= 0 && up_held &
     if (spr_attack_up != -1) {
         owner.sprite_index = spr_attack_up;
 
-        var frames_up0 = max(1, sprite_get_number(spr_attack_up));
+        // Use owner's sprite_index for frame count (type-safe)
+        var frames_up0 = max(1, sprite_get_number(owner.sprite_index));
         var step_up0   = frames_up0 / (max(0.001, attack_cd_s) * room_speed);
         var bias_up    = clamp(frames_up0 * warm_ratio, 0, max(0, frames_up0 - 1));
         owner.image_speed = 0; // ENGINE OFF — we drive manually
@@ -114,7 +115,8 @@ if (!combo_active && pressed_any && up_timer <= 0 && attack_cd <= 0) {
     if (spr != -1) {
         owner.sprite_index = spr;
 
-        var frames0 = max(1, sprite_get_number(spr));
+        // Type-safe frame count from owner's current sprite
+        var frames0 = max(1, sprite_get_number(owner.sprite_index));
         var step0   = frames0 / (max(0.001, combo_dur_s) * room_speed);
         var bias0   = clamp(frames0 * warm_ratio, 0, max(0, frames0 - 1));
         owner.image_speed = 0; // ENGINE OFF
