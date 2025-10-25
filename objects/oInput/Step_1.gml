@@ -42,7 +42,6 @@ if (pressed_attack) {
     show_debug_message("[INPUT] attack_pressed pulse");
 }
 
-
 // -------- Publish --------
 global.input.move_x         = mx;
 global.input.jump_down      = down_jump;
@@ -53,4 +52,3 @@ global.input.attack_pressed = pressed_attack;
 // -------- Latch for next frame --------
 _jump_prev   = down_jump;
 _attack_prev = down_attack;
-

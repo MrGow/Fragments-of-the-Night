@@ -15,26 +15,28 @@ attack_lock_frames      = 0;       // optional tiny frame-lock support
 // ---------------- Typed Sprite lookup ----------------------
 /// @func __spr
 /// @param {string} _name
-/// @return {Sprite}
+/// @return {Asset.GMSprite|undefined}
 function __spr(_name) {
-    var s = asset_get_index(_name);  // generic Asset id
-    return (s != -1) ? s : -1;       // typed by @return {Sprite}
+    var s = asset_get_index(_name);      // generic Asset id
+    return (s != -1) ? s : undefined;    // return undefined if not found
 }
 
 // ---------------- Sprites (typed via __spr) ----------------
 spr_idle        = __spr("spritePlayerIdle");
 spr_run         = __spr("spritePlayerRun");
 spr_jump        = __spr("spritePlayerJump");
-spr_attack      = __spr("spriteSwordAttack"); // legacy single anim (kept if present)
+
+// Legacy single attack (kept if present, not used by combo driver)
+spr_attack      = __spr("spriteSwordAttack");
 
 // NEW: ledge + hurt/drink
 spr_ledge_grab  = __spr("spritePlayerLedgeGrab");
 spr_ledge_pull  = __spr("spritePlayerLedgePull");
-spr_hurt        = __spr("spritePlayerHurt");   // may be -1 if not added yet
-spr_drink       = __spr("spritePlayerDrink");  // optional
+spr_hurt        = __spr("spritePlayerHurt");
+spr_drink       = __spr("spritePlayerDrink");
 
 // Start in Idle if available
-if (spr_idle != -1) { sprite_index = spr_idle; image_speed = 0.4; }
+if (!is_undefined(spr_idle)) { sprite_index = spr_idle; image_speed = 0.4; }
 
 // ---------------- Movement tuning -------------------
 move_speed              = 2.5;

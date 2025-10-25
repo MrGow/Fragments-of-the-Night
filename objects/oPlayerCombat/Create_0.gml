@@ -13,12 +13,17 @@ slash_damage       = 1;
 slash_up_y_offset  = 12;
 slash_up_damage    = 1;
 
-// ===== Attack sprites =====
-spr_attack_a   = -1;
-spr_attack_b   = -1;
-spr_attack_c   = -1;
-spr_attack_up  = -1;
+// ===== Attack sprites (typed/missing-safe) =====
+/// @type {Asset.GMSprite|undefined}
+spr_attack_a   = undefined;
+/// @type {Asset.GMSprite|undefined}
+spr_attack_b   = undefined;
+/// @type {Asset.GMSprite|undefined}
+spr_attack_c   = undefined;
+/// @type {Asset.GMSprite|undefined}
+spr_attack_up  = undefined;
 
+// Safe lookups
 var _a = asset_get_index("spriteSwordAttackA"); if (_a != -1) spr_attack_a = _a;
 var _b = asset_get_index("spriteSwordAttackB"); if (_b != -1) spr_attack_b = _b;
 var _c = asset_get_index("spriteSwordAttackC"); if (_c != -1) spr_attack_c = _c;
@@ -47,4 +52,3 @@ last_finished_index  = 0;       // used if pressing during reset window
 
 // ===== Debug flag (optional) =====
 combo_debug = false;
-

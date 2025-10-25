@@ -53,12 +53,12 @@ function __on_ground_check() {
 
 // ---------- Sprite switch helper: preserve FEET position ----------
 function __set_sprite_keep_feet(_spr, _speed) {
-    if (_spr == -1) return;
+    if (is_undefined(_spr)) return;
     var cur_yoff = sprite_get_yoffset(sprite_index);
     var cur_bot  = sprite_get_bbox_bottom(sprite_index);
     var feet_y   = y - cur_yoff + cur_bot;
 
-    sprite_index = _spr; // _spr is typed Sprite via __spr @return
+    sprite_index = _spr; // _spr is Asset.GMSprite
     if (!is_undefined(_speed)) image_speed = _speed;
 
     var new_yoff = sprite_get_yoffset(sprite_index);
@@ -118,14 +118,14 @@ if (_new_hurt && state != "drink") {
     if (state == "ledge" || state == "ledge_pull") vsp = max(vsp, 1.5);
 
     state = "hurt";
-    if (variable_instance_exists(id,"spr_hurt") && spr_hurt != -1) {
+    if (!is_undefined(spr_hurt)) {
         __set_sprite_keep_feet(spr_hurt, hurt_anim_speed);
         image_index = 0;
     }
     hsp = 0;
 
-    var frames_in_strip = (sprite_index == spr_hurt) ? image_number : 0;
-    if (spr_hurt == -1 || frames_in_strip <= 1) { hurt_lock_timer = max(1, hurt_lock_frames_default); }
+    var frames_in_strip = (!is_undefined(spr_hurt) && sprite_index == spr_hurt) ? image_number : 0;
+    if (is_undefined(spr_hurt) || frames_in_strip <= 1) { hurt_lock_timer = max(1, hurt_lock_frames_default); }
     else { hurt_lock_timer = 0; }
 }
 
@@ -136,10 +136,10 @@ var _sprC = __spr("spriteSwordAttackC");
 var _sprU = __spr("spriteSwordAttackUp");
 
 var _is_attack_sprite =
-    (_sprA != -1 && sprite_index == _sprA) ||
-    (_sprB != -1 && sprite_index == _sprB) ||
-    (_sprC != -1 && sprite_index == _sprC) ||
-    (_sprU != -1 && sprite_index == _sprU);
+    (!is_undefined(_sprA) && sprite_index == _sprA) ||
+    (!is_undefined(_sprB) && sprite_index == _sprB) ||
+    (!is_undefined(_sprC) && sprite_index == _sprC) ||
+    (!is_undefined(_sprU) && sprite_index == _sprU);
 
 if (_is_attack_sprite) {
     state = "attack";
@@ -168,7 +168,7 @@ var attacking_now  = _is_attack_sprite || pc_combo_active;
 var on_ground = __on_ground_check();
 
 
-// ===================== LEDGE: ENTER/MAINTAIN/PULL (robust + regrab cooldown) =====================
+// ===================== LEDGE: ENTER/MAINTAIN/PULL =====================
 // Tunables for 43x26 mask, 16px tiles
 var GRAB_MAX_GAP_PX   = 1;
 var HEAD_CLEAR_PX     = 9;
@@ -270,10 +270,10 @@ function __try_ledge_grab(_dir, _gap_max, _head_clear, _search_px, _max_drop, _m
     var sprC = __spr("spriteSwordAttackC");
     var sprU = __spr("spriteSwordAttackUp");
     var is_attack_now =
-        (sprA != -1 && sprite_index == sprA) ||
-        (sprB != -1 && sprite_index == sprB) ||
-        (sprC != -1 && sprite_index == sprC) ||
-        (sprU != -1 && sprite_index == sprU) ||
+        (!is_undefined(sprA) && sprite_index == sprA) ||
+        (!is_undefined(sprB) && sprite_index == sprB) ||
+        (!is_undefined(sprC) && sprite_index == sprC) ||
+        (!is_undefined(sprU) && sprite_index == sprU) ||
         pc_combo_active;
     if (is_attack_now) return false;
 
@@ -292,7 +292,7 @@ function __try_ledge_grab(_dir, _gap_max, _head_clear, _search_px, _max_drop, _m
     ledge_dir   = _dir;
     hsp = 0; vsp = 0;
 
-    if (spr_ledge_grab != -1) { __set_sprite_keep_feet(spr_ledge_grab, 0.25); image_index = 0; }
+    if (!is_undefined(spr_ledge_grab)) { __set_sprite_keep_feet(spr_ledge_grab, 0.25); image_index = 0; }
 
     ledge_start_x = x;  ledge_start_y = y;
     ledge_target_x = x + ledge_dir * _pull_fwd; // provisional
@@ -309,7 +309,7 @@ if (ledge_enabled) {
         y = ledge_snap_y;
         hsp = 0; vsp = 0;
         image_xscale = (ledge_dir > 0) ? 1 : -1;
-        if (spr_ledge_grab != -1 && sprite_index != spr_ledge_grab) __set_sprite_keep_feet(spr_ledge_grab, 0.25);
+        if (!is_undefined(spr_ledge_grab) && sprite_index != spr_ledge_grab) __set_sprite_keep_feet(spr_ledge_grab, 0.25);
 
         // Drop off
         if (k_down || (move_x != 0 && sign(move_x) == -ledge_dir)) {
@@ -329,7 +329,7 @@ if (ledge_enabled) {
 
             state = "ledge_pull";
             image_index = 0;
-            if (spr_ledge_pull != -1) __set_sprite_keep_feet(spr_ledge_pull, 0.65);
+            if (!is_undefined(spr_ledge_pull)) __set_sprite_keep_feet(spr_ledge_pull, 0.65);
 
             ledge_t = 0;
             ledge_start_x = x; ledge_start_y = y;
@@ -373,7 +373,7 @@ if (ledge_enabled) {
             __resolve_small_embed();
 
             state = "idle";
-            if (spr_idle != -1) __set_sprite_keep_feet(spr_idle, 0.4);
+            if (!is_undefined(spr_idle)) __set_sprite_keep_feet(spr_idle, 0.4);
 
             ledge_regrab_cd = REGRAB_COOLDOWN; // short cooldown so we don't instantly re-grab
         }
@@ -463,13 +463,13 @@ if (!in_lock_state && !pc_combo_active && !ledge_now && abs(move_x) > 0.001 && !
 if (!pc_combo_active && !ledge_now && !_skip_overrides_this_frame) {
     if (!in_lock_state) {
         if (!on_ground) {
-            if (variable_instance_exists(id,"spr_jump") && spr_jump != -1) { __set_sprite_keep_feet(spr_jump, 0.3); state = "jump"; }
+            if (!is_undefined(spr_jump)) { __set_sprite_keep_feet(spr_jump, 0.3); state = "jump"; }
             else state = "jump";
         } else if (abs(move_x) > 0.001) {
-            if (variable_instance_exists(id,"spr_run") && spr_run != -1)  { __set_sprite_keep_feet(spr_run, 1.2); state = "run"; }
+            if (!is_undefined(spr_run))  { __set_sprite_keep_feet(spr_run, 1.2); state = "run"; }
             else state = "run";
         } else {
-            if (variable_instance_exists(id,"spr_idle") && spr_idle != -1) { __set_sprite_keep_feet(spr_idle, 0.4); state = "idle"; }
+            if (!is_undefined(spr_idle)) { __set_sprite_keep_feet(spr_idle, 0.4); state = "idle"; }
             else state = "idle";
         }
     }
@@ -480,13 +480,13 @@ if (state == "hurt" && hurt_lock_timer > 0 && !_skip_overrides_this_frame) {
     hurt_lock_timer--;
     if (hurt_lock_timer <= 0) {
         if (!on_ground) {
-            if (variable_instance_exists(id,"spr_jump") && spr_jump != -1) { __set_sprite_keep_feet(spr_jump, 0.3); state = "jump"; }
+            if (!is_undefined(spr_jump)) { __set_sprite_keep_feet(spr_jump, 0.3); state = "jump"; }
             else state = "jump";
         } else if (abs(move_x) > 0.001) {
-            if (variable_instance_exists(id,"spr_run") && spr_run != -1)  { __set_sprite_keep_feet(spr_run, 1.2); state = "run"; }
+            if (!is_undefined(spr_run))  { __set_sprite_keep_feet(spr_run, 1.2); state = "run"; }
             else state = "run";
         } else {
-            if (variable_instance_exists(id,"spr_idle") && spr_idle != -1) { __set_sprite_keep_feet(spr_idle, 0.4); state = "idle"; }
+            if (!is_undefined(spr_idle)) { __set_sprite_keep_feet(spr_idle, 0.4); state = "idle"; }
             else state = "idle";
         }
     }

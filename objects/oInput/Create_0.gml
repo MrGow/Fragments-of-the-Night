@@ -1,5 +1,4 @@
 /// oInput — Create
-// Persistent singleton
 persistent = true;
 if (instance_number(oInput) > 1) { instance_destroy(); exit; }
 

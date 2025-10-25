@@ -21,10 +21,10 @@ if (!variable_instance_exists(id,"queued_attack"))      queued_attack      = fal
 if (!variable_instance_exists(id,"queued_up"))          queued_up          = false;
 
 // Sprite lookups (safe even if missing)
-var sprA = asset_get_index("spriteSwordAttackA");
-var sprB = asset_get_index("spriteSwordAttackB");
-var sprC = asset_get_index("spriteSwordAttackC");
-var sprU = asset_get_index("spriteSwordAttackUp");
+var sprA = asset_get_index("spriteSwordAttackA"); sprA = (sprA != -1) ? sprA : undefined;
+var sprB = asset_get_index("spriteSwordAttackB"); sprB = (sprB != -1) ? sprB : undefined;
+var sprC = asset_get_index("spriteSwordAttackC"); sprC = (sprC != -1) ? sprC : undefined;
+var sprU = asset_get_index("spriteSwordAttackUp"); sprU = (sprU != -1) ? sprU : undefined;
 
 // ---- Cooldowns / timers ----
 var dt = 1 / room_speed;
@@ -55,30 +55,29 @@ var can_fire_now    = (attack_cd <= 0) && (!owner.pc_combo_active);
 var in_combo_window = (combo_index == 0) || (combo_timer > 0); // first hit always allowed
 
 if (queued_attack && can_fire_now && in_combo_window) {
-    var use_spr = -1;
+    var use_spr = undefined;
     var used_variant = "A";
 
     // Up-slash takes priority if requested and sprite exists
-    if (queued_up && sprU != -1) {
+    if (queued_up && !is_undefined(sprU)) {
         use_spr = sprU;
         used_variant = "U";
-        // Up-slash does not advance ground-chain
-        // (You can change this if you want U to be part of the chain.)
+        // Up-slash does not advance ground-chain (by design)
     } else {
         // Ground chain A -> B -> C (fallbacks if a sprite is missing)
         if (combo_index == 0) {
-            if (sprA != -1) use_spr = sprA;
-            else if (sprB != -1) use_spr = sprB;
+            if (!is_undefined(sprA)) use_spr = sprA;
+            else if (!is_undefined(sprB)) use_spr = sprB;
             else use_spr = sprC;
             used_variant = "A";
         } else if (combo_index == 1) {
-            if (sprB != -1) use_spr = sprB;
-            else if (sprA != -1) use_spr = sprA;
+            if (!is_undefined(sprB)) use_spr = sprB;
+            else if (!is_undefined(sprA)) use_spr = sprA;
             else use_spr = sprC;
             used_variant = "B";
         } else { // 2
-            if (sprC != -1) use_spr = sprC;
-            else if (sprB != -1) use_spr = sprB;
+            if (!is_undefined(sprC)) use_spr = sprC;
+            else if (!is_undefined(sprB)) use_spr = sprB;
             else use_spr = sprA;
             used_variant = "C";
         }
@@ -90,9 +89,11 @@ if (queued_attack && can_fire_now && in_combo_window) {
     // Hand off to player (set anim and lock)
     _chosen_attack_sprite = use_spr; // instance var so 'with' can read it
     with (owner) {
-        sprite_index        = other._chosen_attack_sprite;
-        image_index         = 0;
-        image_speed         = attack_anim_speed; // let it play
+        if (!is_undefined(other._chosen_attack_sprite)) {
+            sprite_index        = other._chosen_attack_sprite;
+            image_index         = 0;
+            image_speed         = attack_anim_speed; // let it play
+        }
         pc_combo_active     = true;              // locomotion lock during swing
         attack_just_started = true;              // protect first frame
         state               = "attack";
@@ -112,7 +113,7 @@ if (queued_attack && can_fire_now && in_combo_window) {
     }
 
     // Start cooldown and clear the buffer we just consumed
-    attack_cd    = attack_cd_s;
+    attack_cd     = attack_cd_s;
     queued_attack = false;
     queued_up     = false;
 }

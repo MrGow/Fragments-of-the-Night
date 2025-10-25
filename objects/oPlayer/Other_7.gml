@@ -17,13 +17,13 @@ function __read_move_x() {
 }
 function __to_locomotion(_on_ground, _mx) {
     if (!_on_ground) {
-        if (variable_instance_exists(id,"spr_jump") && spr_jump != -1) { state = "jump"; sprite_index = spr_jump; image_speed = 0.3; }
+        if (!is_undefined(spr_jump)) { state = "jump"; sprite_index = spr_jump; image_speed = 0.3; }
         else { state = "jump"; }
     } else if (abs(_mx) > 0.001) {
-        if (variable_instance_exists(id,"spr_run") && spr_run != -1) { state = "run";  sprite_index = spr_run;  image_speed = 1.2; }
+        if (!is_undefined(spr_run))  { state = "run";  sprite_index = spr_run;  image_speed = 1.2; }
         else { state = "run"; }
     } else {
-        if (variable_instance_exists(id,"spr_idle") && spr_idle != -1) { state = "idle"; sprite_index = spr_idle; image_speed = 0.4; }
+        if (!is_undefined(spr_idle)) { state = "idle"; sprite_index = spr_idle; image_speed = 0.4; }
         else { state = "idle"; }
     }
 }
@@ -33,7 +33,7 @@ var __mx            = __read_move_x();
 
 switch (state) {
     case "attack":
-        pc_combo_active = false;  // <-- important: release combo lock
+        pc_combo_active = false;  // release combo lock
         __to_locomotion(__on_ground_now, __mx);
         break;
 
