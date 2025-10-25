@@ -58,7 +58,7 @@ function __set_sprite_keep_feet(_spr, _speed) {
     var cur_bot  = sprite_get_bbox_bottom(sprite_index);
     var feet_y   = y - cur_yoff + cur_bot;
 
-    sprite_index = _spr;
+    sprite_index = _spr; // _spr is typed Sprite via __spr @return
     if (!is_undefined(_speed)) image_speed = _speed;
 
     var new_yoff = sprite_get_yoffset(sprite_index);
@@ -130,10 +130,10 @@ if (_new_hurt && state != "drink") {
 }
 
 // ==================== ATTACK ANIM HARDENING + RELEASE ====================
-var _sprA = asset_get_index("spriteSwordAttackA");
-var _sprB = asset_get_index("spriteSwordAttackB");
-var _sprC = asset_get_index("spriteSwordAttackC");
-var _sprU = asset_get_index("spriteSwordAttackUp");
+var _sprA = __spr("spriteSwordAttackA");
+var _sprB = __spr("spriteSwordAttackB");
+var _sprC = __spr("spriteSwordAttackC");
+var _sprU = __spr("spriteSwordAttackUp");
 
 var _is_attack_sprite =
     (_sprA != -1 && sprite_index == _sprA) ||
@@ -265,10 +265,10 @@ function __try_ledge_grab(_dir, _gap_max, _head_clear, _search_px, _max_drop, _m
     if (ledge_regrab_cd > 0) return false;
     if (state == "ledge" || state == "ledge_pull") return false;
 
-    var sprA = asset_get_index("spriteSwordAttackA");
-    var sprB = asset_get_index("spriteSwordAttackB");
-    var sprC = asset_get_index("spriteSwordAttackC");
-    var sprU = asset_get_index("spriteSwordAttackUp");
+    var sprA = __spr("spriteSwordAttackA");
+    var sprB = __spr("spriteSwordAttackB");
+    var sprC = __spr("spriteSwordAttackC");
+    var sprU = __spr("spriteSwordAttackUp");
     var is_attack_now =
         (sprA != -1 && sprite_index == sprA) ||
         (sprB != -1 && sprite_index == sprB) ||

@@ -12,17 +12,26 @@ image_xscale            = 1;
 attack_lock             = false;
 attack_lock_frames      = 0;       // optional tiny frame-lock support
 
-// ---------------- Sprites (look up by name) ----------------------
-spr_idle        = asset_get_index("spritePlayerIdle");
-spr_run         = asset_get_index("spritePlayerRun");
-spr_jump        = asset_get_index("spritePlayerJump");
-spr_attack      = asset_get_index("spriteSwordAttack"); // legacy
+// ---------------- Typed Sprite lookup ----------------------
+/// @func __spr
+/// @param {string} _name
+/// @return {Sprite}
+function __spr(_name) {
+    var s = asset_get_index(_name);  // generic Asset id
+    return (s != -1) ? s : -1;       // typed by @return {Sprite}
+}
+
+// ---------------- Sprites (typed via __spr) ----------------
+spr_idle        = __spr("spritePlayerIdle");
+spr_run         = __spr("spritePlayerRun");
+spr_jump        = __spr("spritePlayerJump");
+spr_attack      = __spr("spriteSwordAttack"); // legacy single anim (kept if present)
 
 // NEW: ledge + hurt/drink
-spr_ledge_grab  = asset_get_index("spritePlayerLedgeGrab");
-spr_ledge_pull  = asset_get_index("spritePlayerLedgePull");
-spr_hurt        = asset_get_index("spritePlayerHurt");    // <— add this sprite to your project
-spr_drink       = asset_get_index("spritePlayerDrink");   // <— add if you have a drink anim
+spr_ledge_grab  = __spr("spritePlayerLedgeGrab");
+spr_ledge_pull  = __spr("spritePlayerLedgePull");
+spr_hurt        = __spr("spritePlayerHurt");   // may be -1 if not added yet
+spr_drink       = __spr("spritePlayerDrink");  // optional
 
 // Start in Idle if available
 if (spr_idle != -1) { sprite_index = spr_idle; image_speed = 0.4; }
