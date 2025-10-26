@@ -22,8 +22,21 @@ function __spr(_name) {
 /** @type {Asset.GMSprite} */ spr_drink      = __spr("spritePlayerDrink");
 
 // Dedicated collision mask so bbox_* stays stable across animations
-/** @type {Asset.GMSprite} */ var __sprMask = __spr("spritePlayerCollisionMask");
-if (__sprMask != -1) mask_index = __sprMask;
+/// oPlayer — Create (excerpt: mask + basics)
+
+/// oPlayer — Create  (mask pin + basics)
+
+// Pin the collision mask to the dedicated sprite (30×46)
+var _mask = asset_get_index("spritePlayerCollisionMask");
+if (_mask != -1) {
+    mask_index = _mask;
+}
+// (If the name is wrong or missing, mask_index simply stays as-is)
+
+
+// (Optional but recommended) ensure other sprites are NOT “Separate collision masks per frame”
+// and use a rectangle mask (not precise).
+
 
 // Start in Idle if available
 if (spr_idle != -1) { sprite_index = spr_idle; image_speed = 0.4; }
