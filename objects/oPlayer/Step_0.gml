@@ -35,9 +35,13 @@ if (!variable_instance_exists(id,"hurt_lock_timer"))         hurt_lock_timer  = 
 if (!variable_instance_exists(id,"last_seen_hurt_pulse"))    last_seen_hurt_pulse = (variable_global_exists("_hurt_pulse_id") ? global._hurt_pulse_id : 0);
 if (!variable_instance_exists(id,"attack_release_linger"))   attack_release_linger = 0;
 
-// ledge/jump spam cooldown + pull watchdog
+// ledge/jump spam cooldown + pull watchdog (+ stall detector)
 if (!variable_instance_exists(id,"ledge_nojump_frames"))     ledge_nojump_frames = 0;
 if (!variable_instance_exists(id,"ledge_pull_watch"))        ledge_pull_watch = 0;
+if (!variable_instance_exists(id,"ledge_stall_frames"))      ledge_stall_frames = 0;
+if (!variable_instance_exists(id,"ledge_prev_x"))            ledge_prev_x = x;
+if (!variable_instance_exists(id,"ledge_prev_y"))            ledge_prev_y = y;
+if (!variable_instance_exists(id,"ledge_prev_phase"))        ledge_prev_phase = 0;
 if (ledge_nojump_frames > 0) ledge_nojump_frames--;
 if (ledge_pull_watch  > 0) ledge_pull_watch--;
 
@@ -55,14 +59,13 @@ var sprDrink_step     = __spr("spritePlayerDrink");
 var sprLedgeGrab_step = __spr("spritePlayerLedgeGrab");
 var sprLedgePull_step = __spr("spritePlayerLedgePull");
 
-// ---------- tilemap access (robust; confirms a real tilemap element) ----------
+// ---------- tilemap access ----------
 if (!variable_global_exists("tm_solids"))      global.tm_solids = undefined;
 if (!variable_global_exists("tm_solids_name")) global.tm_solids_name = "";
 
 function __ensure_tm_solids() {
-    if (!is_undefined(global.tm_solids) && global.tm_solids != -1) {
-        return global.tm_solids;
-    }
+    if (!is_undefined(global.tm_solids) && global.tm_solids != -1) return global.tm_solids;
+
     var lid = layer_get_id("Solids");
     if (lid != -1) {
         var elems = layer_get_all_elements(lid);
@@ -71,64 +74,106 @@ function __ensure_tm_solids() {
             if (layer_get_element_type(el) == layerelementtype_tilemap) {
                 global.tm_solids      = el;
                 global.tm_solids_name = layer_get_name(lid);
-                show_debug_message("[COL] Using tilemap on layer 'Solids' (id=" + string(el) + ")");
                 return el;
             }
         }
-        show_debug_message("[COL] Layer 'Solids' exists but has NO tilemap element.");
     }
     var layers = layer_get_all();
     for (var j = 0; j < array_length(layers); j++) {
         var lid2  = layers[j];
-        var lname = string_lower(layer_get_name(lid2));
-        if (string_pos("solid", lname) > 0 || string_pos("collision", lname) > 0) {
-            var els = layer_get_all_elements(lid2);
-            for (var k = 0; k < array_length(els); k++) {
-                var el2 = els[k];
-                if (layer_get_element_type(el2) == layerelementtype_tilemap) {
-                    global.tm_solids      = el2;
-                    global.tm_solids_name = layer_get_name(lid2);
-                    show_debug_message("[COL] Auto-found tilemap on layer '" + global.tm_solids_name + "' (id=" + string(el2) + ")");
-                    return el2;
-                }
+        var els = layer_get_all_elements(lid2);
+        for (var k = 0; k < array_length(els); k++) {
+            var el2 = els[k];
+            if (layer_get_element_type(el2) == layerelementtype_tilemap) {
+                global.tm_solids      = el2;
+                global.tm_solids_name = layer_get_name(lid2);
+                return el2;
             }
         }
     }
-    for (var j2 = 0; j2 < array_length(layers); j2++) {
-        var lid3 = layers[j2];
-        var els2 = layer_get_all_elements(lid3);
-        for (var k2 = 0; k < array_length(els2); k2++) {
-            var el3 = els2[k2];
-            if (layer_get_element_type(el3) == layerelementtype_tilemap) {
-                global.tm_solids      = el3;
-                global.tm_solids_name = layer_get_name(lid3);
-                show_debug_message("[COL] Fallback tilemap on layer '" + global.tm_solids_name + "' (id=" + string(el3) + ")");
-                return el3;
-            }
-        }
-    }
-    global.tm_solids      = undefined;
+    global.tm_solids = undefined;
     global.tm_solids_name = "";
-    show_debug_message("[COL] WARNING: No tilemap found for collisions.");
     return undefined;
 }
 __ensure_tm_solids();
 
-// ---------- collision helpers ----------
+// ---------- collision helpers (EDGE-SAMPLING + climb capsule) ----------
 function __tile_solid_at(_x,_y) {
     return (!is_undefined(global.tm_solids)) && (tilemap_get_at_pixel(global.tm_solids,_x,_y)!=0);
 }
+
+/*
+    During ledge_pull we shrink the effective rectangle:
+      - inset TOP by 6 px (avoid head snag)
+      - inset the BACK shoulder by 5 px (opposite ledge_dir)
+    This lets the tall pull sprite pass the lip without getting blocked,
+    while still preventing tunneling elsewhere.
+*/
 function __rect_hits_solid(_dx,_dy) {
-    var l = bbox_left + _dx;
+    // base bbox
+    var l = bbox_left  + _dx;
     var r = bbox_right + _dx;
-    var t = bbox_top + _dy;
-    var b = bbox_bottom + _dy;
-    var e = 0.1;
-    return __tile_solid_at(l+e,t+e) || __tile_solid_at(r-e,t+e) || __tile_solid_at(l+e,b-e) || __tile_solid_at(r-e,b-e);
+    var t = bbox_top   + _dy;
+    var b = bbox_bottom+ _dy;
+
+    // CLIMB CAPSULE insets (only during ledge_pull)
+    if (state == "ledge_pull") {
+        var inset_top  = 6;
+        var inset_back = 5;
+        t += inset_top;
+
+        // back = opposite of ledge_dir
+        if (ledge_dir > 0) { // facing right -> back is left edge
+            l += inset_back;
+        } else if (ledge_dir < 0) { // facing left -> back is right edge
+            r -= inset_back;
+        }
+        // ensure valid rect
+        if (r <= l + 1) r = l + 1;
+        if (b <= t + 1) b = t + 1;
+    }
+
+    var e = 0.1;   // inward epsilon
+    var step_v = 4; // tighter stepping for thin lips
+    var step_h = 4;
+
+    // left & right edges
+    var yy = t + e;
+    while (yy <= b - e + 0.0001) {
+        if (__tile_solid_at(l + e, yy)) return true;
+        if (__tile_solid_at(r - e, yy)) return true;
+        yy += step_v;
+    }
+    if (__tile_solid_at(l + e, b - e)) return true;
+    if (__tile_solid_at(r - e, b - e)) return true;
+
+    // top & bottom edges
+    var xx = l + e;
+    while (xx <= r - e + 0.0001) {
+        if (__tile_solid_at(xx, t + e)) return true;
+        if (__tile_solid_at(xx, b - e)) return true;
+        xx += step_h;
+    }
+    if (__tile_solid_at(r - e, t + e)) return true;
+    if (__tile_solid_at(r - e, b - e)) return true;
+
+    return false;
 }
+
+// Ground check: sample across the feet, not just two corners.
 function __on_ground_check() {
+    var l = bbox_left;
+    var r = bbox_right;
+    var b = bbox_bottom;
     var e = 0.1;
-    return __tile_solid_at(bbox_left+e,bbox_bottom+1) || __tile_solid_at(bbox_right-e,bbox_bottom+1);
+
+    var step = 4;
+    var xx = l + e;
+    while (xx <= r - e + 0.0001) {
+        if (__tile_solid_at(xx, b + 1)) return true;
+        xx += step;
+    }
+    return __tile_solid_at(r - e, b + 1);
 }
 
 // ---------- sprite switch (keep feet) ----------
@@ -199,7 +244,7 @@ if (_is_attack_sprite) {
     else attack_release_linger=0;
 } else {
     attack_release_linger=0;
-    if (pc_combo_active) pc_combo_active = false; // safety auto-release
+    if (pc_combo_active) pc_combo_active = false;
 }
 
 // ---------- env pre-check ----------
@@ -254,8 +299,9 @@ function __move_axis_pixelwise(_dx, _dy, _spd) {
 function __pull_phase_step(_tx, _ty, _prefer_axis) {
     var px = _tx - x;
     var py = _ty - y;
-    var frames_left = max(1, round(ledge_pull_time * room_speed * 0.90));
-    var _spd = min(max(1.0, (abs(px) + abs(py)) / frames_left), 6);
+    // a bit faster and with a higher cap to prevent mid-air timeouts
+    var frames_left = max(1, round(ledge_pull_time * room_speed * 0.85));
+    var _spd = min(max(1.0, (abs(px) + abs(py)) / frames_left), 8);
     if (_prefer_axis == "y") {
         if (abs(py) > 0.001) __move_axis_pixelwise(0,  py, _spd);
         if (abs(px) > 0.001) __move_axis_pixelwise(px, 0,  _spd);
@@ -272,7 +318,8 @@ function __begin_ledge_from_marker(_m) {
     var hang_x = _m.x + ((_m.facing == 0) ? _m.hang_dx : _m.hang_dx * fx);
     var hang_y = _m.y + _m.hang_dy;
 
-    var tx = _m.x + ((_m.facing == 0) ? _m.pull_dx : _m.pull_dx * fx);
+    // stand target: push deeper onto platform (+8px extra inward)
+    var tx = _m.x + ((_m.facing == 0) ? (_m.pull_dx + 8) : (_m.pull_dx + 8) * fx);
     var ty = _m.y + _m.pull_dy;
 
     state = "ledge";
@@ -280,6 +327,7 @@ function __begin_ledge_from_marker(_m) {
     hsp = 0;
     vsp = 0;
 
+    // slide into hang X safely
     var dx = hang_x - x;
     var sx = sign(dx);
     var ax = abs(dx);
@@ -287,6 +335,7 @@ function __begin_ledge_from_marker(_m) {
     var fxr = ax - floor(ax);
     if (fxr > 0 && !__rect_hits_solid(sx*fxr, 0)) x += sx*fxr;
 
+    // climb up to hang Y without clipping
     var dy = hang_y - y;
     if (dy > 0) {
         var left = dy;
@@ -300,21 +349,18 @@ function __begin_ledge_from_marker(_m) {
     var sprGrab = __spr("spritePlayerLedgeGrab");
     if (sprGrab != -1) { __set_sprite_keep_feet(sprGrab, 0.65); image_index = 0; }
 
-    // --- phase targets: OUT first, then UP, then final settle ---
+    // --- phase targets: OUT (bigger), UP (higher), then final stand ---
     ledge_phase = 0;
-    // small outward peel to clear the lip
-    phase0_tx   = x + (ledge_dir * 6);
+    phase0_tx   = x + (ledge_dir * 14); // stronger outward peel
     phase0_ty   = y;
-    // rise beside the lip
     phase1_tx   = phase0_tx;
-    phase1_ty   = _m.y - 8;
-    // final stand spot
+    phase1_ty   = _m.y - 12;           // crest a bit higher before sweep
     phase2_tx   = tx;
     phase2_ty   = ty;
 
     ledge_pull_time   = 0.30;
-    ledge_grab_grace  = 6;
-    ledge_regrab_cd   = 10;
+    ledge_grab_grace  = 7;
+    ledge_regrab_cd   = 16;
     ledge_autopull    = _m.autopull;
 
     image_xscale = (ledge_dir > 0) ? 1 : -1;
@@ -323,8 +369,6 @@ function __begin_ledge_from_marker(_m) {
 function __try_ledge_marker(_dir) {
     if (!ledge_enabled || ledge_regrab_cd > 0) return false;
     if (state == "ledge" || state == "ledge_pull") return false;
-
-    // block grabs for a few frames right after walking off an edge
     if (ledge_walkoff_lock > 0) return false;
 
     // Only allow grabs while falling, not rising/jumping.
@@ -343,12 +387,11 @@ function __try_ledge_marker(_dir) {
         pc_combo_active;
     if (is_attacking) return false;
 
-    // Scan params
+    // Scan params (unchanged)
     var R   = 80;
     var VY  = 48;
     var fwd = (image_xscale >= 0) ? 1 : -1;
 
-    // Share params/results via instance vars for 'with' block
     __scan_R  = R;
     __scan_VY = VY;
     __scan_fwd = fwd;
@@ -362,19 +405,9 @@ function __try_ledge_marker(_dir) {
             var dy_local = y - other.y;
 
             var ok = true;
-
-            // Respect marker facing if constrained
-            if (ok && facing != 0) {
-                if (facing != other.__scan_fwd) ok = false;
-            }
-
-            // Horizontal & vertical windows
+            if (ok && facing != 0) if (facing != other.__scan_fwd) ok = false;
             if (ok && abs(dx_local) > other.__scan_R) ok = false;
             if (ok && abs(dy_local) > other.__scan_VY) ok = false;
-
-            // player head must be under the lip (prevents grab when stepping off from above)
-            var head_below_lip = (other.bbox_top >= y - 2); // 'y' here is marker lip Y
-            if (ok && !head_below_lip) ok = false;
 
             if (ok) {
                 var d2_local = dx_local*dx_local + dy_local*dy_local;
@@ -413,17 +446,16 @@ if (ledge_enabled) {
         if (want_drop) {
             state="jump";
             vsp=1.5;
-            ledge_regrab_cd=14;
+            ledge_regrab_cd=16;
             ledge_nojump_frames=6;
         } else {
             if (!variable_instance_exists(id,"__ledge_t")) __ledge_t = 0;
             __ledge_t += 1/room_speed;
 
             var jump_now = k_jump_p;
-            // start autopull sooner to avoid "rising while grab"
             var should_pull = jump_now || ((ledge_grab_grace<=0) && (ledge_autopull) && (__ledge_t>=0.05));
             if (should_pull) {
-                var pre_dx = ledge_dir * 8; // tiny outward nudge
+                var pre_dx = ledge_dir * 14;  // stronger pre-nudge to clear lip
                 if (!__rect_hits_solid(pre_dx, 0)) x += pre_dx;
 
                 var sprPull = __spr("spritePlayerLedgePull");
@@ -439,7 +471,16 @@ if (ledge_enabled) {
                 }
 
                 state="ledge_pull";
-                ledge_pull_watch = ceil(room_speed * 1.60);
+
+                // Watchdog tied to anim length (big buffer)
+                var watch_frames = ceil(max(ledge_pull_time * room_speed * 2.5, room_speed * 6.0));
+                ledge_pull_watch = watch_frames;
+
+                // reset stall tracking
+                ledge_stall_frames = 0;
+                ledge_prev_x = x;
+                ledge_prev_y = y;
+                ledge_prev_phase = ledge_phase;
 
                 jump_buffer_timer = 0;
                 coyote_timer      = 0;
@@ -449,13 +490,27 @@ if (ledge_enabled) {
     }
     else if (state=="ledge_pull") {
         if (ledge_regrab_cd>0) ledge_regrab_cd--;
-        if (ledge_pull_watch > 0) ledge_pull_watch--;
 
-        // progress along the new 3-phase path (OUT -> UP -> UP)
+        // progress along the 3-phase path (OUT -> UP -> UP)
         var reached = false;
         if (ledge_phase == 0) { reached = __pull_phase_step(phase0_tx, phase0_ty, "x"); if (reached) ledge_phase = 1; }
         if (ledge_phase == 1) { reached = __pull_phase_step(phase1_tx, phase1_ty, "y"); if (reached) ledge_phase = 2; }
         if (ledge_phase == 2) { reached = __pull_phase_step(phase2_tx, phase2_ty, "y"); }
+
+        // progress/stall tracking
+        var progressed = (abs(x - ledge_prev_x) > 0.05) || (abs(y - ledge_prev_y) > 0.05) || (ledge_phase != ledge_prev_phase);
+        if (progressed) {
+            ledge_stall_frames = 0;
+            ledge_prev_x = x;
+            ledge_prev_y = y;
+            ledge_prev_phase = ledge_phase;
+        } else {
+            ledge_stall_frames++;
+        }
+        if (!progressed) ledge_pull_watch--; // only consume watch on stalls
+
+        // allow early finish when we're close enough to the stand point
+        var close_enough = (abs(x - phase2_tx) <= 10) && (abs(y - phase2_ty) <= 12);
 
         // freeze on final frame once reached
         if (sprLedgePull_step != -1 && sprite_index == sprLedgePull_step && image_number > 0 && image_index >= image_number - 1.0) {
@@ -464,19 +519,40 @@ if (ledge_enabled) {
         }
         var finished_anim = (sprLedgePull_step != -1) && (sprite_index == sprLedgePull_step) && (image_speed == 0) && (image_index >= image_number - 1.0);
 
-        if ( finished_anim || (ledge_pull_watch <= 0) ) {
+        // define "truly stuck": no progress for ~1.0s
+        var stuck = (ledge_stall_frames >= ceil(room_speed * 1.0));
+
+        if (reached || close_enough || finished_anim || stuck || (ledge_pull_watch <= 0)) {
+            // --- FINAL SNAP/SWEEP TO STAND POINT ---
+            // 1) sweep along X toward exact stand X (faster)
+            var dx_final = phase2_tx - x;
+            if (abs(dx_final) > 0.001) {
+                __move_axis_pixelwise(dx_final, 0, 10);
+            }
+            // snap if near and clear
+            var dx_left = phase2_tx - x;
+            if (abs(dx_left) <= 4 && !__rect_hits_solid(dx_left, 0)) {
+                x = phase2_tx;
+            }
+
+            // 2) clamp Y to not go above planned stand Y
+            if (y < phase2_ty) y = phase2_ty;
+
+            // 3) tiny outward nudge so we aren’t flush with the lip
             var nudged_x = x + (ledge_dir > 0 ? 1 : -1);
             if (!__rect_hits_solid(nudged_x - x, 0)) x = nudged_x;
 
-            var settle_limit = 40;
+            // 4) settle down onto the floor from current Y
+            var settle_limit = 48;
             var s = 0;
             while (s < settle_limit && !__rect_hits_solid(0, 1)) { y += 1; s++; }
             if (__rect_hits_solid(0, 1)) y -= 1;
 
+            // exit to idle
             state="idle";
             if (sprIdle_step != -1) __set_sprite_keep_feet(sprIdle_step,0.4);
-            ledge_regrab_cd     = 14;
-            ledge_nojump_frames = 6;
+            ledge_regrab_cd     = 16;
+            ledge_nojump_frames = 8;
             hsp=0; vsp=0;
 
             jump_buffer_timer = 0;
@@ -544,9 +620,9 @@ if (!ledge_now && vsp != 0) {
 // ---------- ground recheck ----------
 on_ground = __on_ground_check();
 
-// ---------- NEW: set walk-off lock when we just left ground ----------
+// ---------- walk-off lock ----------
 var just_left_ground = (was_on_ground && !on_ground && vsp >= 0);
-if (just_left_ground) ledge_walkoff_lock = 8; // frames of "no-grab" after stepping off
+if (just_left_ground) ledge_walkoff_lock = 10;
 
 // remember ground for next step
 was_on_ground = on_ground;
@@ -591,3 +667,5 @@ if (state=="hurt" && hurt_lock_timer>0 && !_skip_overrides_this_frame) {
 
 // ---------- clear guard ----------
 if (attack_just_started) attack_just_started = false;
+
+
