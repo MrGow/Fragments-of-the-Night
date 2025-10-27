@@ -45,12 +45,12 @@ if (!variable_instance_exists(id,"ledge_prev_phase"))        ledge_prev_phase = 
 if (ledge_nojump_frames > 0) ledge_nojump_frames--;
 if (ledge_pull_watch  > 0) ledge_pull_watch--;
 
-// NEW: walk-off lock + ground memory
+// walk-off lock + ground memory
 if (!variable_instance_exists(id,"ledge_walkoff_lock")) ledge_walkoff_lock = 0;
 if (!variable_instance_exists(id,"was_on_ground"))      was_on_ground      = false;
 if (ledge_walkoff_lock > 0) ledge_walkoff_lock--;
 
-// ---------- sprite locals (UNtyped ids) ----------
+// ---------- sprite locals ----------
 var sprIdle_step      = __spr("spritePlayerIdle");
 var sprRun_step       = __spr("spritePlayerRun");
 var sprJump_step      = __spr("spritePlayerJump");
@@ -103,38 +103,27 @@ function __tile_solid_at(_x,_y) {
 }
 
 /*
-    During ledge_pull we shrink the effective rectangle:
-      - inset TOP by 6 px (avoid head snag)
-      - inset the BACK shoulder by 5 px (opposite ledge_dir)
-    This lets the tall pull sprite pass the lip without getting blocked,
-    while still preventing tunneling elsewhere.
+  During ledge_pull we shrink the effective rectangle:
+    - inset TOP by 6 px (avoid head snag)
+    - inset the BACK shoulder by 5 px (opposite ledge_dir)
 */
 function __rect_hits_solid(_dx,_dy) {
-    // base bbox
     var l = bbox_left  + _dx;
     var r = bbox_right + _dx;
     var t = bbox_top   + _dy;
     var b = bbox_bottom+ _dy;
 
-    // CLIMB CAPSULE insets (only during ledge_pull)
     if (state == "ledge_pull") {
         var inset_top  = 6;
         var inset_back = 5;
         t += inset_top;
-
-        // back = opposite of ledge_dir
-        if (ledge_dir > 0) { // facing right -> back is left edge
-            l += inset_back;
-        } else if (ledge_dir < 0) { // facing left -> back is right edge
-            r -= inset_back;
-        }
-        // ensure valid rect
+        if (ledge_dir > 0) l += inset_back; else if (ledge_dir < 0) r -= inset_back;
         if (r <= l + 1) r = l + 1;
         if (b <= t + 1) b = t + 1;
     }
 
     var e = 0.1;   // inward epsilon
-    var step_v = 4; // tighter stepping for thin lips
+    var step_v = 4;
     var step_h = 4;
 
     // left & right edges
@@ -160,13 +149,12 @@ function __rect_hits_solid(_dx,_dy) {
     return false;
 }
 
-// Ground check: sample across the feet, not just two corners.
+// Ground check: sample across the feet
 function __on_ground_check() {
     var l = bbox_left;
     var r = bbox_right;
     var b = bbox_bottom;
     var e = 0.1;
-
     var step = 4;
     var xx = l + e;
     while (xx <= r - e + 0.0001) {
@@ -174,6 +162,43 @@ function __on_ground_check() {
         xx += step;
     }
     return __tile_solid_at(r - e, b + 1);
+}
+
+// ---------- SAFE-LANDING FINDER ----------
+// Search just inside the platform for a legal place to stand.
+// Returns [found_bool, new_x, new_y]
+function __find_safe_stand_near(_cx, _cy, _dir) {
+    var max_inward = 24;
+    var lateral_step = 4;
+    var vertical_scan_up   = 24;
+    var vertical_scan_down = 72;
+
+    for (var inward = 0; inward <= max_inward; inward += 2) {
+        var base_x = _cx + _dir * inward;
+        for (var side = -8; side <= 8; side += lateral_step) {
+            var px = base_x + side;
+
+            // Start a little above, scan downward to find the first floor
+            var y0 = _cy - vertical_scan_up;
+            var y1 = _cy + vertical_scan_down;
+
+            var yscan = y0;
+            // descend until tile below is solid
+            while (yscan < y1 && !__tile_solid_at(px, yscan + 1)) {
+                yscan++;
+            }
+            if (yscan >= y1) continue;           // no floor in range
+            if (__tile_solid_at(px, yscan)) continue; // inside a wall
+
+            // compute deltas to place feet exactly on that floor y
+            var dx = px - x;
+            var dy = (yscan - bbox_bottom);
+            if (!__rect_hits_solid(dx, dy)) {
+                return [true, x + dx, y + dy];
+            }
+        }
+    }
+    return [false, _cx, _cy];
 }
 
 // ---------- sprite switch (keep feet) ----------
@@ -189,7 +214,7 @@ function __set_sprite_keep_feet(_spr,_speed){
     y = feet_y - (new_bot - new_yoff);
 }
 
-// ---------- input (keyboard wins; then oInput) ----------
+// ---------- input ----------
 var kx = (keyboard_check(vk_right)||keyboard_check(ord("D"))) - (keyboard_check(vk_left)||keyboard_check(ord("A")));
 kx = clamp(kx,-1,1);
 var k_jump_p = keyboard_check_pressed(vk_space);
@@ -299,7 +324,6 @@ function __move_axis_pixelwise(_dx, _dy, _spd) {
 function __pull_phase_step(_tx, _ty, _prefer_axis) {
     var px = _tx - x;
     var py = _ty - y;
-    // a bit faster and with a higher cap to prevent mid-air timeouts
     var frames_left = max(1, round(ledge_pull_time * room_speed * 0.85));
     var _spd = min(max(1.0, (abs(px) + abs(py)) / frames_left), 8);
     if (_prefer_axis == "y") {
@@ -318,7 +342,7 @@ function __begin_ledge_from_marker(_m) {
     var hang_x = _m.x + ((_m.facing == 0) ? _m.hang_dx : _m.hang_dx * fx);
     var hang_y = _m.y + _m.hang_dy;
 
-    // stand target: push deeper onto platform (+8px extra inward)
+    // stand target: push deeper onto platform (+8px)
     var tx = _m.x + ((_m.facing == 0) ? (_m.pull_dx + 8) : (_m.pull_dx + 8) * fx);
     var ty = _m.y + _m.pull_dy;
 
@@ -327,7 +351,6 @@ function __begin_ledge_from_marker(_m) {
     hsp = 0;
     vsp = 0;
 
-    // slide into hang X safely
     var dx = hang_x - x;
     var sx = sign(dx);
     var ax = abs(dx);
@@ -335,7 +358,6 @@ function __begin_ledge_from_marker(_m) {
     var fxr = ax - floor(ax);
     if (fxr > 0 && !__rect_hits_solid(sx*fxr, 0)) x += sx*fxr;
 
-    // climb up to hang Y without clipping
     var dy = hang_y - y;
     if (dy > 0) {
         var left = dy;
@@ -351,10 +373,10 @@ function __begin_ledge_from_marker(_m) {
 
     // --- phase targets: OUT (bigger), UP (higher), then final stand ---
     ledge_phase = 0;
-    phase0_tx   = x + (ledge_dir * 14); // stronger outward peel
+    phase0_tx   = x + (ledge_dir * 14);
     phase0_ty   = y;
     phase1_tx   = phase0_tx;
-    phase1_ty   = _m.y - 12;           // crest a bit higher before sweep
+    phase1_ty   = _m.y - 12;
     phase2_tx   = tx;
     phase2_ty   = ty;
 
@@ -387,7 +409,6 @@ function __try_ledge_marker(_dir) {
         pc_combo_active;
     if (is_attacking) return false;
 
-    // Scan params (unchanged)
     var R   = 80;
     var VY  = 48;
     var fwd = (image_xscale >= 0) ? 1 : -1;
@@ -433,7 +454,6 @@ function __try_ledge_marker(_dir) {
 // --- ledge state machine (marker-driven only) ---
 if (ledge_enabled) {
     if (state=="ledge") {
-        // pin Y to avoid float
         y = ledge_snap_y;
         hsp = 0;
         vsp = 0;
@@ -455,28 +475,25 @@ if (ledge_enabled) {
             var jump_now = k_jump_p;
             var should_pull = jump_now || ((ledge_grab_grace<=0) && (ledge_autopull) && (__ledge_t>=0.05));
             if (should_pull) {
-                var pre_dx = ledge_dir * 14;  // stronger pre-nudge to clear lip
+                var pre_dx = ledge_dir * 14;
                 if (!__rect_hits_solid(pre_dx, 0)) x += pre_dx;
 
                 var sprPull = __spr("spritePlayerLedgePull");
                 if (sprPull != -1) {
                     __set_sprite_keep_feet(sprPull, 0.90);
                     image_index = 0;
-
                     var frames = max(1, image_number);
                     var spd    = max(0.01, image_speed);
-                    ledge_pull_time = frames / spd / room_speed; // seconds
+                    ledge_pull_time = frames / spd / room_speed;
                 } else {
                     ledge_pull_time = 0.30;
                 }
 
                 state="ledge_pull";
 
-                // Watchdog tied to anim length (big buffer)
                 var watch_frames = ceil(max(ledge_pull_time * room_speed * 2.5, room_speed * 6.0));
                 ledge_pull_watch = watch_frames;
 
-                // reset stall tracking
                 ledge_stall_frames = 0;
                 ledge_prev_x = x;
                 ledge_prev_y = y;
@@ -491,13 +508,11 @@ if (ledge_enabled) {
     else if (state=="ledge_pull") {
         if (ledge_regrab_cd>0) ledge_regrab_cd--;
 
-        // progress along the 3-phase path (OUT -> UP -> UP)
         var reached = false;
         if (ledge_phase == 0) { reached = __pull_phase_step(phase0_tx, phase0_ty, "x"); if (reached) ledge_phase = 1; }
         if (ledge_phase == 1) { reached = __pull_phase_step(phase1_tx, phase1_ty, "y"); if (reached) ledge_phase = 2; }
         if (ledge_phase == 2) { reached = __pull_phase_step(phase2_tx, phase2_ty, "y"); }
 
-        // progress/stall tracking
         var progressed = (abs(x - ledge_prev_x) > 0.05) || (abs(y - ledge_prev_y) > 0.05) || (ledge_phase != ledge_prev_phase);
         if (progressed) {
             ledge_stall_frames = 0;
@@ -507,57 +522,56 @@ if (ledge_enabled) {
         } else {
             ledge_stall_frames++;
         }
-        if (!progressed) ledge_pull_watch--; // only consume watch on stalls
+        if (!progressed) ledge_pull_watch--;
 
-        // allow early finish when we're close enough to the stand point
         var close_enough = (abs(x - phase2_tx) <= 10) && (abs(y - phase2_ty) <= 12);
 
-        // freeze on final frame once reached
         if (sprLedgePull_step != -1 && sprite_index == sprLedgePull_step && image_number > 0 && image_index >= image_number - 1.0) {
             image_index = image_number - 1.0;
             image_speed = 0;
         }
         var finished_anim = (sprLedgePull_step != -1) && (sprite_index == sprLedgePull_step) && (image_speed == 0) && (image_index >= image_number - 1.0);
 
-        // define "truly stuck": no progress for ~1.0s
         var stuck = (ledge_stall_frames >= ceil(room_speed * 1.0));
 
         if (reached || close_enough || finished_anim || stuck || (ledge_pull_watch <= 0)) {
-            // --- FINAL SNAP/SWEEP TO STAND POINT ---
-            // 1) sweep along X toward exact stand X (faster)
-            var dx_final = phase2_tx - x;
-            if (abs(dx_final) > 0.001) {
-                __move_axis_pixelwise(dx_final, 0, 10);
+            // --- FINAL: prefer a SAFE LAND near the intended stand point ---
+            var want_x = phase2_tx;
+            var want_y = phase2_ty;
+            var found = __find_safe_stand_near(want_x, want_y, ledge_dir);
+            if (found[0]) {
+                x = found[1];
+                y = found[2];
+            } else {
+                // fallback: sweep/snap + settle
+                var dx_final = want_x - x;
+                if (abs(dx_final) > 0.001) __move_axis_pixelwise(dx_final, 0, 10);
+                var dx_left = want_x - x;
+                if (abs(dx_left) <= 4 && !__rect_hits_solid(dx_left, 0)) x = want_x;
+                if (y < want_y) y = want_y;
+                var nudged_x = x + (ledge_dir > 0 ? 1 : -1);
+                if (!__rect_hits_solid(nudged_x - x, 0)) x = nudged_x;
+
+                var settle_limit = 48;
+                var s = 0;
+                while (s < settle_limit && !__rect_hits_solid(0, 1)) { y += 1; s++; }
+                if (__rect_hits_solid(0, 1)) y -= 1;
             }
-            // snap if near and clear
-            var dx_left = phase2_tx - x;
-            if (abs(dx_left) <= 4 && !__rect_hits_solid(dx_left, 0)) {
-                x = phase2_tx;
+
+            // Only exit once we truly have ground underfoot
+            if (!__on_ground_check()) {
+                // give ourselves a few extra frames to hunt a landing
+                ledge_pull_watch = max(ledge_pull_watch, ceil(room_speed * 0.5));
+            } else {
+                state="idle";
+                if (sprIdle_step != -1) __set_sprite_keep_feet(sprIdle_step,0.4);
+                ledge_regrab_cd     = 16;
+                ledge_nojump_frames = 8;
+                hsp=0; vsp=0;
+                jump_buffer_timer = 0;
+                coyote_timer      = 0;
+                if (variable_global_exists("input") && is_struct(global.input)) global.input.jump_pressed = false;
             }
-
-            // 2) clamp Y to not go above planned stand Y
-            if (y < phase2_ty) y = phase2_ty;
-
-            // 3) tiny outward nudge so we aren’t flush with the lip
-            var nudged_x = x + (ledge_dir > 0 ? 1 : -1);
-            if (!__rect_hits_solid(nudged_x - x, 0)) x = nudged_x;
-
-            // 4) settle down onto the floor from current Y
-            var settle_limit = 48;
-            var s = 0;
-            while (s < settle_limit && !__rect_hits_solid(0, 1)) { y += 1; s++; }
-            if (__rect_hits_solid(0, 1)) y -= 1;
-
-            // exit to idle
-            state="idle";
-            if (sprIdle_step != -1) __set_sprite_keep_feet(sprIdle_step,0.4);
-            ledge_regrab_cd     = 16;
-            ledge_nojump_frames = 8;
-            hsp=0; vsp=0;
-
-            jump_buffer_timer = 0;
-            coyote_timer      = 0;
-            if (variable_global_exists("input") && is_struct(global.input)) global.input.jump_pressed = false;
         } else {
             hsp = 0;
             vsp = 0; // freeze physics during pull
@@ -585,7 +599,7 @@ if (!in_lock_state && on_ground && (pc_combo_active || ledge_now)) hsp_target = 
 if (!on_ground && pc_combo_active) hsp_target *= air_attack_drift;
 hsp = ledge_now ? 0 : hsp_target;
 
-// ---------- jump (blocked a few frames after ledge) ----------
+// ---------- jump ----------
 var can_jump_buffer = (!in_lock_state && !pc_combo_active && !ledge_now && jump_buffer_timer>0 && coyote_timer>0 && !_skip_overrides_this_frame && (ledge_nojump_frames<=0));
 var can_jump_ground = (!in_lock_state && !pc_combo_active && !ledge_now && on_ground && k_jump_p && !_skip_overrides_this_frame && (ledge_nojump_frames<=0));
 if (can_jump_buffer || can_jump_ground) { vsp = jump_speed; jump_buffer_timer=0; coyote_timer=0; }
@@ -623,8 +637,6 @@ on_ground = __on_ground_check();
 // ---------- walk-off lock ----------
 var just_left_ground = (was_on_ground && !on_ground && vsp >= 0);
 if (just_left_ground) ledge_walkoff_lock = 10;
-
-// remember ground for next step
 was_on_ground = on_ground;
 
 // ---------- facing ----------
@@ -667,5 +679,4 @@ if (state=="hurt" && hurt_lock_timer>0 && !_skip_overrides_this_frame) {
 
 // ---------- clear guard ----------
 if (attack_just_started) attack_just_started = false;
-
 
