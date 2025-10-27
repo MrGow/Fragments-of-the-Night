@@ -41,6 +41,11 @@ if (!variable_instance_exists(id,"ledge_pull_watch"))        ledge_pull_watch = 
 if (ledge_nojump_frames > 0) ledge_nojump_frames--;
 if (ledge_pull_watch  > 0) ledge_pull_watch--;
 
+// NEW: walk-off lock + ground memory
+if (!variable_instance_exists(id,"ledge_walkoff_lock")) ledge_walkoff_lock = 0;
+if (!variable_instance_exists(id,"was_on_ground"))      was_on_ground      = false;
+if (ledge_walkoff_lock > 0) ledge_walkoff_lock--;
+
 // ---------- sprite locals (UNtyped ids) ----------
 var sprIdle_step      = __spr("spritePlayerIdle");
 var sprRun_step       = __spr("spritePlayerRun");
@@ -92,7 +97,7 @@ function __ensure_tm_solids() {
     for (var j2 = 0; j2 < array_length(layers); j2++) {
         var lid3 = layers[j2];
         var els2 = layer_get_all_elements(lid3);
-        for (var k2 = 0; k2 < array_length(els2); k2++) {
+        for (var k2 = 0; k < array_length(els2); k2++) {
             var el3 = els2[k2];
             if (layer_get_element_type(el3) == layerelementtype_tilemap) {
                 global.tm_solids      = el3;
@@ -295,11 +300,15 @@ function __begin_ledge_from_marker(_m) {
     var sprGrab = __spr("spritePlayerLedgeGrab");
     if (sprGrab != -1) { __set_sprite_keep_feet(sprGrab, 0.65); image_index = 0; }
 
+    // --- phase targets: OUT first, then UP, then final settle ---
     ledge_phase = 0;
-    phase0_tx   = x;
-    phase0_ty   = _m.y - 8;
-    phase1_tx   = tx;
-    phase1_ty   = phase0_ty;
+    // small outward peel to clear the lip
+    phase0_tx   = x + (ledge_dir * 6);
+    phase0_ty   = y;
+    // rise beside the lip
+    phase1_tx   = phase0_tx;
+    phase1_ty   = _m.y - 8;
+    // final stand spot
     phase2_tx   = tx;
     phase2_ty   = ty;
 
@@ -315,8 +324,11 @@ function __try_ledge_marker(_dir) {
     if (!ledge_enabled || ledge_regrab_cd > 0) return false;
     if (state == "ledge" || state == "ledge_pull") return false;
 
-    // You no longer have to be falling; just not grounded.
-    if (__on_ground_check()) return false;
+    // block grabs for a few frames right after walking off an edge
+    if (ledge_walkoff_lock > 0) return false;
+
+    // Only allow grabs while falling, not rising/jumping.
+    if (__on_ground_check() || vsp < 0.3) return false;
 
     // Block while attacking
     var __atkA = __spr("spriteSwordAttackA");
@@ -331,9 +343,9 @@ function __try_ledge_marker(_dir) {
         pc_combo_active;
     if (is_attacking) return false;
 
-    // Scan params (looser)
-    var R   = 80;   // horizontal reach
-    var VY  = 48;   // vertical tolerance
+    // Scan params
+    var R   = 80;
+    var VY  = 48;
     var fwd = (image_xscale >= 0) ? 1 : -1;
 
     // Share params/results via instance vars for 'with' block
@@ -351,7 +363,7 @@ function __try_ledge_marker(_dir) {
 
             var ok = true;
 
-            // Respect marker's facing *only* if it is constrained
+            // Respect marker facing if constrained
             if (ok && facing != 0) {
                 if (facing != other.__scan_fwd) ok = false;
             }
@@ -359,6 +371,10 @@ function __try_ledge_marker(_dir) {
             // Horizontal & vertical windows
             if (ok && abs(dx_local) > other.__scan_R) ok = false;
             if (ok && abs(dy_local) > other.__scan_VY) ok = false;
+
+            // player head must be under the lip (prevents grab when stepping off from above)
+            var head_below_lip = (other.bbox_top >= y - 2); // 'y' here is marker lip Y
+            if (ok && !head_below_lip) ok = false;
 
             if (ok) {
                 var d2_local = dx_local*dx_local + dy_local*dy_local;
@@ -384,6 +400,7 @@ function __try_ledge_marker(_dir) {
 // --- ledge state machine (marker-driven only) ---
 if (ledge_enabled) {
     if (state=="ledge") {
+        // pin Y to avoid float
         y = ledge_snap_y;
         hsp = 0;
         vsp = 0;
@@ -396,23 +413,33 @@ if (ledge_enabled) {
         if (want_drop) {
             state="jump";
             vsp=1.5;
-            ledge_regrab_cd=10;
+            ledge_regrab_cd=14;
             ledge_nojump_frames=6;
         } else {
             if (!variable_instance_exists(id,"__ledge_t")) __ledge_t = 0;
             __ledge_t += 1/room_speed;
 
             var jump_now = k_jump_p;
-            var should_pull = jump_now || ((ledge_grab_grace<=0) && (ledge_autopull) && (__ledge_t>=0.12));
+            // start autopull sooner to avoid "rising while grab"
+            var should_pull = jump_now || ((ledge_grab_grace<=0) && (ledge_autopull) && (__ledge_t>=0.05));
             if (should_pull) {
-                var pre_dx = ledge_dir * 8;
+                var pre_dx = ledge_dir * 8; // tiny outward nudge
                 if (!__rect_hits_solid(pre_dx, 0)) x += pre_dx;
 
                 var sprPull = __spr("spritePlayerLedgePull");
-                if (sprPull != -1) { sprite_index=sprPull; image_index=0; image_speed=0.90; }
+                if (sprPull != -1) {
+                    __set_sprite_keep_feet(sprPull, 0.90);
+                    image_index = 0;
+
+                    var frames = max(1, image_number);
+                    var spd    = max(0.01, image_speed);
+                    ledge_pull_time = frames / spd / room_speed; // seconds
+                } else {
+                    ledge_pull_time = 0.30;
+                }
 
                 state="ledge_pull";
-                ledge_pull_watch = ceil(room_speed * 1.20);
+                ledge_pull_watch = ceil(room_speed * 1.60);
 
                 jump_buffer_timer = 0;
                 coyote_timer      = 0;
@@ -424,19 +451,20 @@ if (ledge_enabled) {
         if (ledge_regrab_cd>0) ledge_regrab_cd--;
         if (ledge_pull_watch > 0) ledge_pull_watch--;
 
+        // progress along the new 3-phase path (OUT -> UP -> UP)
         var reached = false;
-        if (ledge_phase == 0) { reached = __pull_phase_step(phase0_tx, phase0_ty, "y"); if (reached) ledge_phase = 1; }
-        if (ledge_phase == 1) { reached = __pull_phase_step(phase1_tx, phase1_ty, "x"); if (reached) ledge_phase = 2; }
+        if (ledge_phase == 0) { reached = __pull_phase_step(phase0_tx, phase0_ty, "x"); if (reached) ledge_phase = 1; }
+        if (ledge_phase == 1) { reached = __pull_phase_step(phase1_tx, phase1_ty, "y"); if (reached) ledge_phase = 2; }
         if (ledge_phase == 2) { reached = __pull_phase_step(phase2_tx, phase2_ty, "y"); }
 
+        // freeze on final frame once reached
         if (sprLedgePull_step != -1 && sprite_index == sprLedgePull_step && image_number > 0 && image_index >= image_number - 1.0) {
             image_index = image_number - 1.0;
             image_speed = 0;
         }
         var finished_anim = (sprLedgePull_step != -1) && (sprite_index == sprLedgePull_step) && (image_speed == 0) && (image_index >= image_number - 1.0);
-        var close_enough  = (abs(x - phase2_tx) <= 3) && (abs(y - phase2_ty) <= 3);
 
-        if (reached || close_enough || finished_anim || (ledge_pull_watch <= 0)) {
+        if ( finished_anim || (ledge_pull_watch <= 0) ) {
             var nudged_x = x + (ledge_dir > 0 ? 1 : -1);
             if (!__rect_hits_solid(nudged_x - x, 0)) x = nudged_x;
 
@@ -447,7 +475,7 @@ if (ledge_enabled) {
 
             state="idle";
             if (sprIdle_step != -1) __set_sprite_keep_feet(sprIdle_step,0.4);
-            ledge_regrab_cd     = 10;
+            ledge_regrab_cd     = 14;
             ledge_nojump_frames = 6;
             hsp=0; vsp=0;
 
@@ -515,6 +543,13 @@ if (!ledge_now && vsp != 0) {
 
 // ---------- ground recheck ----------
 on_ground = __on_ground_check();
+
+// ---------- NEW: set walk-off lock when we just left ground ----------
+var just_left_ground = (was_on_ground && !on_ground && vsp >= 0);
+if (just_left_ground) ledge_walkoff_lock = 8; // frames of "no-grab" after stepping off
+
+// remember ground for next step
+was_on_ground = on_ground;
 
 // ---------- facing ----------
 if (!in_lock_state && !pc_combo_active && !ledge_now && abs(move_x)>0.001 && !_skip_overrides_this_frame) {
