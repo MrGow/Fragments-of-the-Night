@@ -67,6 +67,7 @@
     {"id":{"name":"oHUD_HPFlask","path":"objects/oHUD_HPFlask/oHUD_HPFlask.yy",},},
     {"id":{"name":"oInput","path":"objects/oInput/oInput.yy",},},
     {"id":{"name":"oJester","path":"objects/oJester/oJester.yy",},},
+    {"id":{"name":"oLedge","path":"objects/oLedge/oLedge.yy",},},
     {"id":{"name":"oMirrorTransition","path":"objects/oMirrorTransition/oMirrorTransition.yy",},},
     {"id":{"name":"oParEnemy","path":"objects/oParEnemy/oParEnemy.yy",},},
     {"id":{"name":"oPauseMenu","path":"objects/oPauseMenu/oPauseMenu.yy",},},

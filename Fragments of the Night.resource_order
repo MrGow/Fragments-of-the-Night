@@ -42,6 +42,7 @@
     {"name":"oGame","order":4,"path":"objects/oGame/oGame.yy",},
     {"name":"oHubExit","order":1,"path":"objects/oHubExit/oHubExit.yy",},
     {"name":"oInput","order":3,"path":"objects/oInput/oInput.yy",},
+    {"name":"oLedge","order":10,"path":"objects/oLedge/oLedge.yy",},
     {"name":"oParEnemy","order":3,"path":"objects/oParEnemy/oParEnemy.yy",},
     {"name":"oPauseMenu","order":1,"path":"objects/oPauseMenu/oPauseMenu.yy",},
     {"name":"oPlayerCombat","order":1,"path":"objects/oPlayerCombat/oPlayerCombat.yy",},
