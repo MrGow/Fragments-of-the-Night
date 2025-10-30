@@ -4,7 +4,7 @@ global.flask_stock = 5;
 
 game_set_speed(60, gamespeed_fps);   // replaces deprecated room_speed
 
-// ---- Reacquire Solids tilemap for this room ----
+// ---- Reacquire Solids (FLOOR) tilemap for this room ----
 var _lid = layer_get_id("Solids");
 if (_lid == -1) {
     // fallback: first tilemap found
@@ -16,8 +16,17 @@ if (_lid == -1) {
 }
 global.tm_solids = (_lid != -1) ? layer_tilemap_get_id(_lid) : undefined;
 
+// ---- Also acquire WALLS tilemap (NEW) ----
+var _lid_walls = layer_get_id("Wall_Tiles"); // exact layer name
+if (_lid_walls != -1) {
+    global.tm_walls = layer_tilemap_get_id(_lid_walls);
+} else {
+    global.tm_walls = undefined;
+}
+
 // ---- Spawn helpers ----
 function _tile_solid_at(_x, _y) {
+    // floors only (used by snap-to-ground)
     return (!is_undefined(global.tm_solids)) && (tilemap_get_at_pixel(global.tm_solids, _x, _y) != 0);
 }
 
@@ -33,17 +42,17 @@ function _rect_inside_solid(_inst, _dx, _dy) {
 
 /// Return a safe (x,y) near the target spawn:
 /// 1) if starting inside, move up to 128px upwards until free
-/// 2) then drop up to _max_down pixels until the tile below is solid
+/// 2) then drop up to _max_down pixels until the FLOOR tile below is solid
 function _snap_to_ground(_inst, _x, _y, _max_down) {
     var xx = _x, yy = _y;
 
-    // 1) Escape if spawned inside solid
+    // 1) Escape if spawned inside floor solids
     var up_tries = 0;
     while (_rect_inside_solid(_inst, xx - _inst.x, yy - _inst.y) && up_tries < 128) {
         yy -= 1; up_tries++;
     }
 
-    // 2) Drop until there is solid directly beneath
+    // 2) Drop until there is FLOOR directly beneath
     var down_tries = 0;
     while (down_tries < _max_down) {
         var l = _inst.bbox_left  + (xx - _inst.x);
@@ -119,7 +128,7 @@ if (!variable_global_exists("hp"))            global.hp = global.max_hp;
 if (!variable_global_exists("flask_max"))     global.flask_max = 3;
 if (!variable_global_exists("flask_stock"))   global.flask_stock = 1;
 if (!variable_global_exists("heal_amount"))   global.heal_amount = 2;   // 2 HP per drink
-if (!variable_global_exists("iframes_time"))  global.iframes_time = 22;
+if (!variable_global_exists("iframes_time"))  global.iframes_time = 44; // bumped per earlier fix
 if (!variable_global_exists("_iframes_timer")) global._iframes_timer = 0;
 if (!variable_global_exists("_drinking_timer")) global._drinking_timer = 0;
 if (!variable_global_exists("_drink_lockout"))  global._drink_lockout = 14;

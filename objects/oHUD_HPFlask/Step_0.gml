@@ -1,4 +1,4 @@
-/// oHUD_HPFlask — Step
+//// oHUD_HPFlask — Step
 
 // ====== Handle HP cap changes safely ======
 if (!variable_global_exists("max_hp")) global.max_hp = max(1, max_hp_cache);
@@ -29,10 +29,17 @@ if (drink_t > prev_drink_timer) {
 }
 prev_drink_timer = drink_t;
 
-// Skull flash on hurt
-if (variable_global_exists("_hurt_this_step") && global._hurt_this_step) {
-    skull_alert_t = skull_alert_ms;
+// ====== Skull flash triggers (hurt OR heal) ======
+var hurt_pulse  = (variable_global_exists("_hurt_this_step")  && global._hurt_this_step);
+var heal_pulse  = (variable_global_exists("_healed_this_step")&& global._healed_this_step);
+if (hurt_pulse || heal_pulse) {
+    skull_alert_t = skull_alert_ms;  // restart flash window
 }
+// IMPORTANT: consume the one-frame pulses so they don't latch
+if (variable_global_exists("_hurt_this_step"))   global._hurt_this_step  = false;
+if (variable_global_exists("_healed_this_step")) global._healed_this_step = false;
+
+// Countdown the flash timer
 if (skull_alert_t > 0) skull_alert_t--;
 
 // ====== Sync target HP from controller ======
@@ -74,5 +81,3 @@ if (active_anim_index != -1) {
         active_anim_index = -1;
     }
 }
-
-

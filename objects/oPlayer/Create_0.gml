@@ -1,4 +1,6 @@
 /// oPlayer — Create  (typed sprites, stable mask, tunables, ledge cooldowns)
+// oPlayer — Create
+depth = -100000; // very “front”; enemies/props use 0 or larger
 
 // ---------- Typed Sprite lookup ----------
 /**
@@ -25,6 +27,8 @@ function __spr(_name) {
 /// oPlayer — Create (excerpt: mask + basics)
 
 /// oPlayer — Create  (mask pin + basics)
+// Visual-only offset so oblique floors look centered
+oblique_draw_inset = 8; // for 32px tiles; try 14–18 to taste
 
 // Pin the collision mask to the dedicated sprite (30×46)
 var _mask = asset_get_index("spritePlayerCollisionMask");

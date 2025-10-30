@@ -1,33 +1,39 @@
 /// oSunPilgrimSlash — Step
-life_frames--;
-if (life_frames <= 0) instance_destroy();
 
-// Follow the owner so the box stays lined up if they move
+// lifetime
+life_frames--;
+if (life_frames <= 0) { instance_destroy(); exit; }
+
+// follow owner; if owner gone, expire
 if (instance_exists(owner)) {
     x = owner.x + direction_sign * 10;
     y = owner.y;
+} else {
+    instance_destroy();
+    exit;
 }
 
-// ===== Manual rectangle hit test so we don't need a sprite mask =====
-// Define a small box in front of the pilgrim; tweak to taste
+// ===== manual rectangle hit test (simple, fast) =====
 var half_w = 10;
 var half_h = 8;
-var x1 = x - half_w;
-var y1 = y - half_h;
-var x2 = x + half_w;
-var y2 = y + half_h;
+var x1 = x - half_w, y1 = y - half_h;
+var x2 = x + half_w, y2 = y + half_h;
 
+// find the player once
 var victim = collision_rectangle(x1, y1, x2, y2, oPlayer, false, true);
 
 if (victim != noone) {
-    // Route through the unified damage function (handles i-frames/HUD/etc.)
-    script_health_take_damage(damage, owner);
+    // Route through unified damage; only proceed if it actually applied
+    if (script_health_take_damage(damage, owner)) {
 
-    // Light knockback away from the attacker
-    var dir = instance_exists(owner) ? sign(victim.x - owner.x) : direction_sign;
-    if (dir == 0) dir = choose(-1, 1);
-    if (variable_instance_exists(victim, "hsp")) victim.hsp += dir * max(1, knockback_px / 3);
+        // Knockback away from attacker (gentle, iframe-safe)
+        var dir = instance_exists(owner) ? sign(victim.x - owner.x) : direction_sign;
+        if (dir == 0) dir = choose(-1, 1);
 
-    // One-and-done so the slash can’t multi-hit
-    instance_destroy();
+        if (variable_instance_exists(victim, "hsp")) victim.hsp += dir * max(1, knockback_px / 3);
+        if (variable_instance_exists(victim, "vsp")) victim.vsp  = min(victim.vsp, -2.0);
+
+        // One-and-done on successful hit so it can’t multi-hit this swing
+        instance_destroy();
+    }
 }

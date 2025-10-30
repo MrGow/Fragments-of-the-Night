@@ -1,4 +1,4 @@
-/// oPlayer — Step  (movement, collisions, combat hooks, marker-ledges)
+ /// oPlayer — Step  (movement, collisions, combat hooks, marker-ledges)
 
 // ---------- one-frame guard ----------
 if (!variable_instance_exists(id,"attack_just_started")) attack_just_started = false;
@@ -62,6 +62,7 @@ var sprLedgePull_step = __spr("spritePlayerLedgePull");
 // ---------- tilemap access ----------
 if (!variable_global_exists("tm_solids"))      global.tm_solids = undefined;
 if (!variable_global_exists("tm_solids_name")) global.tm_solids_name = "";
+if (!variable_global_exists("tm_walls"))       global.tm_walls  = undefined;
 
 function __ensure_tm_solids() {
     if (!is_undefined(global.tm_solids) && global.tm_solids != -1) return global.tm_solids;
@@ -97,9 +98,14 @@ function __ensure_tm_solids() {
 }
 __ensure_tm_solids();
 
-// ---------- collision helpers (EDGE-SAMPLING + climb capsule) ----------
-function __tile_solid_at(_x,_y) {
+// ---------- collision helpers (FLOOR vs ANY-SOLID) ----------
+function __tile_floor_at(_x,_y) {
     return (!is_undefined(global.tm_solids)) && (tilemap_get_at_pixel(global.tm_solids,_x,_y)!=0);
+}
+function __tile_any_solid_at(_x,_y) {
+    if (!is_undefined(global.tm_solids) && tilemap_get_at_pixel(global.tm_solids,_x,_y)!=0) return true;
+    if (!is_undefined(global.tm_walls)  && tilemap_get_at_pixel(global.tm_walls ,_x,_y)!=0) return true;
+    return false;
 }
 
 /*
@@ -129,27 +135,27 @@ function __rect_hits_solid(_dx,_dy) {
     // left & right edges
     var yy = t + e;
     while (yy <= b - e + 0.0001) {
-        if (__tile_solid_at(l + e, yy)) return true;
-        if (__tile_solid_at(r - e, yy)) return true;
+        if (__tile_any_solid_at(l + e, yy)) return true;
+        if (__tile_any_solid_at(r - e, yy)) return true;
         yy += step_v;
     }
-    if (__tile_solid_at(l + e, b - e)) return true;
-    if (__tile_solid_at(r - e, b - e)) return true;
+    if (__tile_any_solid_at(l + e, b - e)) return true;
+    if (__tile_any_solid_at(r - e, b - e)) return true;
 
     // top & bottom edges
     var xx = l + e;
     while (xx <= r - e + 0.0001) {
-        if (__tile_solid_at(xx, t + e)) return true;
-        if (__tile_solid_at(xx, b - e)) return true;
+        if (__tile_any_solid_at(xx, t + e)) return true;
+        if (__tile_any_solid_at(xx, b - e)) return true;
         xx += step_h;
     }
-    if (__tile_solid_at(r - e, t + e)) return true;
-    if (__tile_solid_at(r - e, b - e)) return true;
+    if (__tile_any_solid_at(r - e, t + e)) return true;
+    if (__tile_any_solid_at(r - e, b - e)) return true;
 
     return false;
 }
 
-// Ground check: sample across the feet
+// Ground check: sample across the feet (FLOOR ONLY)
 function __on_ground_check() {
     var l = bbox_left;
     var r = bbox_right;
@@ -158,10 +164,10 @@ function __on_ground_check() {
     var step = 4;
     var xx = l + e;
     while (xx <= r - e + 0.0001) {
-        if (__tile_solid_at(xx, b + 1)) return true;
+        if (__tile_floor_at(xx, b + 1)) return true;
         xx += step;
     }
-    return __tile_solid_at(r - e, b + 1);
+    return __tile_floor_at(r - e, b + 1);
 }
 
 // ---------- SAFE-LANDING FINDER ----------
@@ -178,17 +184,16 @@ function __find_safe_stand_near(_cx, _cy, _dir) {
         for (var side = -8; side <= 8; side += lateral_step) {
             var px = base_x + side;
 
-            // Start a little above, scan downward to find the first floor
+            // Start a little above, scan downward to find the first FLOOR
             var y0 = _cy - vertical_scan_up;
             var y1 = _cy + vertical_scan_down;
 
             var yscan = y0;
-            // descend until tile below is solid
-            while (yscan < y1 && !__tile_solid_at(px, yscan + 1)) {
+            while (yscan < y1 && !__tile_floor_at(px, yscan + 1)) {
                 yscan++;
             }
-            if (yscan >= y1) continue;           // no floor in range
-            if (__tile_solid_at(px, yscan)) continue; // inside a wall
+            if (yscan >= y1) continue;                 // no floor in range
+            if (__tile_any_solid_at(px, yscan)) continue; // inside any solid (wall/floor)
 
             // compute deltas to place feet exactly on that floor y
             var dx = px - x;
@@ -275,7 +280,6 @@ if (_is_attack_sprite) {
 // ---------- env pre-check ----------
 var on_ground = __on_ground_check();
 
-
 // ======================================================================
 // ================= M A R K E R - B A S E D   L E D G E S ==============
 // ======================================================================
@@ -337,16 +341,6 @@ function __pull_phase_step(_tx, _ty, _prefer_axis) {
 }
 
 function __begin_ledge_from_marker(_m) {
-    // --- Compute anchor from 32×32 cell corner (if requested), else fallback ---
-    // Per-marker controls on oLedge:
-    //   use_cell_corners : bool
-    //   cell_size        : int (grid size, default 32)
-    //   anchor_corner    : int (0=TL,1=TR,2=BL,3=BR)  [default 3]
-    //   marker_x_offset  : int (fine nudge)
-    //   marker_y_offset  : int (fine nudge)
-    // Fallback (if use_cell_corners is false/missing):
-    //   grid_h, anchor_bottom_half (previous scheme)
-
     var useCorners = (variable_instance_exists(_m,"use_cell_corners") ? _m.use_cell_corners : false);
     var ax, ay;
 
@@ -355,14 +349,12 @@ function __begin_ledge_from_marker(_m) {
         var cx    = floor(_m.x / cell) * cell;
         var cy    = floor(_m.y / cell) * cell;
         var corner= (variable_instance_exists(_m,"anchor_corner") ? _m.anchor_corner : 3);
-        // 0=TL, 1=TR, 2=BL, 3=BR
         switch (corner) {
             case 0: ax = cx;         ay = cy;          break; // TL
             case 1: ax = cx + cell;  ay = cy;          break; // TR
             case 2: ax = cx;         ay = cy + cell;   break; // BL
             default:ax = cx + cell;  ay = cy + cell;   break; // BR
         }
-        // fine nudges
         ax += (variable_instance_exists(_m,"marker_x_offset") ? _m.marker_x_offset : 0);
         ay += (variable_instance_exists(_m,"marker_y_offset") ? _m.marker_y_offset : 0);
     } else {
@@ -373,23 +365,19 @@ function __begin_ledge_from_marker(_m) {
            + (variable_instance_exists(_m,"marker_y_offset") ? _m.marker_y_offset : 0);
     }
 
-    // --- Facing ---
     var fx = (_m.facing == 0) ? (sign(image_xscale)==0? 1 : sign(image_xscale)) : _m.facing;
 
-    // --- Use anchor (ax,ay) as the lip reference ---
     var hang_x = ax + ((_m.facing == 0) ? _m.hang_dx : _m.hang_dx * fx);
     var hang_y = ay + _m.hang_dy;
 
     var tx = ax + ((_m.facing == 0) ? _m.pull_dx : _m.pull_dx * fx);
     var ty = ay + _m.pull_dy;
 
-    // --- Enter ledge state ---
     state = "ledge";
     ledge_dir = fx;
     hsp = 0;
     vsp = 0;
 
-    // slide safely to hang X
     var dx = hang_x - x;
     var sx = sign(dx);
     var ax_abs = abs(dx);
@@ -397,7 +385,6 @@ function __begin_ledge_from_marker(_m) {
     var fxr = ax_abs - floor(ax_abs);
     if (fxr > 0 && !__rect_hits_solid(sx*fxr, 0)) x += sx*fxr;
 
-    // climb up to hang Y without clipping
     var dy = hang_y - y;
     if (dy > 0) {
         var left = dy;
@@ -411,16 +398,14 @@ function __begin_ledge_from_marker(_m) {
     var sprGrab = __spr("spritePlayerLedgeGrab");
     if (sprGrab != -1) { __set_sprite_keep_feet(sprGrab, 0.65); image_index = 0; }
 
-    // --- Phase targets: OUT, then UP to crest above anchor, then final stand ---
     ledge_phase = 0;
     phase0_tx   = x + (ledge_dir * 14);
     phase0_ty   = y;
     phase1_tx   = phase0_tx;
-    phase1_ty   = ay - 12; // crest slightly above the lip height (uses computed anchor)
+    phase1_ty   = ay - 12; // crest slightly above the lip height
     phase2_tx   = tx;
     phase2_ty   = ty;
 
-    // timings & flags
     ledge_pull_time   = 0.30;
     ledge_grab_grace  = 7;
     ledge_regrab_cd   = 16;
@@ -434,10 +419,8 @@ function __try_ledge_marker(_dir) {
     if (state == "ledge" || state == "ledge_pull") return false;
     if (ledge_walkoff_lock > 0) return false;
 
-    // Only allow grabs while falling, not rising/jumping.
     if (__on_ground_check() || vsp < 0.3) return false;
 
-    // Block while attacking
     var __atkA = __spr("spriteSwordAttackA");
     var __atkB = __spr("spriteSwordAttackB");
     var __atkC = __spr("spriteSwordAttackC");
@@ -576,7 +559,7 @@ if (ledge_enabled) {
         var stuck = (ledge_stall_frames >= ceil(room_speed * 1.0));
 
         if (reached || close_enough || finished_anim || stuck || (ledge_pull_watch <= 0)) {
-            // --- FINAL: prefer a SAFE LAND near the intended stand point ---
+            // --- FINAL: prefer a SAFE LAND near the intended stand point (floor only) ---
             var want_x = phase2_tx;
             var want_y = phase2_ty;
             var found = __find_safe_stand_near(want_x, want_y, ledge_dir);
@@ -584,7 +567,6 @@ if (ledge_enabled) {
                 x = found[1];
                 y = found[2];
             } else {
-                // fallback: sweep/snap + settle
                 var dx_final = want_x - x;
                 if (abs(dx_final) > 0.001) __move_axis_pixelwise(dx_final, 0, 10);
                 var dx_left = want_x - x;
@@ -599,9 +581,7 @@ if (ledge_enabled) {
                 if (__rect_hits_solid(0, 1)) y -= 1;
             }
 
-            // Only exit once we truly have ground underfoot
             if (!__on_ground_check()) {
-                // give ourselves a few extra frames to hunt a landing
                 ledge_pull_watch = max(ledge_pull_watch, ceil(room_speed * 0.5));
             } else {
                 state="idle";
@@ -672,7 +652,7 @@ if (!ledge_now && vsp != 0) {
     if (fy>0 && vsp!=0) { if (!__rect_hits_solid(0,sy*fy)) y+=sy*fy; else vsp=0; }
 }
 
-// ---------- ground recheck ----------
+// ---------- ground recheck (FLOOR only) ----------
 on_ground = __on_ground_check();
 
 // ---------- walk-off lock ----------

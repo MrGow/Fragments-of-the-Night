@@ -1,8 +1,8 @@
 /// oSunPilgrimSlash — Create
-life_frames    = 6;     // active window
+life_frames    = 6;     // active window (frames)
 damage         = 1;     // tune per enemy
 direction_sign = 1;     // +1 right, -1 left (set by spawner)
-owner          = noone; // set by spawner
+owner          = noone; // set by spawner (enemy instance)
 knockback_px   = 5;     // light push on hit
 team           = "enemy";
 

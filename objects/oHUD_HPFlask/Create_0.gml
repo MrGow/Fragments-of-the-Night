@@ -19,6 +19,8 @@ lead_conn_count = 0;      // moons start immediately
 row_gap_px      = 6;      // vertical gap between HP row and chalice row
 hp_y_offset     = 4;      // slight vertical nudge for the HP row
 skull_y_nudge   = 65;     // bring skull down to meet the vine
+// Nudge the moon row left so the antler visually connects
+antler_bridge_px = 14;   // try 10–16 to taste
 
 // Vine look
 connector_flipped               = false;

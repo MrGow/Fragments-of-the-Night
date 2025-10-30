@@ -1,4 +1,19 @@
-/// oHUD_HPFlask — Draw GUI
+/// oHUD_HPFlask — Draw GUI (normalized to 640×360, then your existing layout)
+
+// --- Normalize GUI to a fixed logical space (640x360) ---
+var gw = display_get_gui_width();
+var gh = display_get_gui_height();
+var base_w = 640, base_h = 360;
+
+var sx = gw / base_w;
+var sy = gh / base_h;
+
+var mw = matrix_get(matrix_world);
+// scale by inverse so our draws behave as if GUI = 640x360
+var ui_norm = matrix_build(0,0,0,  0,0,0,  1/sx, 1/sy, 1);
+matrix_set(matrix_world, matrix_multiply(mw, ui_norm));
+
+// -------------------- YOUR EXISTING DRAW (unchanged) --------------------
 
 // Snap anchors to integers to keep things crisp
 base_x = round(base_x);
@@ -18,7 +33,9 @@ var hp_y = round(gy + hp_y_offset);
 // ===== Vine behind moons (HP scale) =====
 var step = (moon_w + moon_gap_px);
 
-var moon_row_x = hp_x + (lead_conn_count * step);
+// NUDGE: pull the entire moon row (and vine) left toward the antler
+var moon_row_x = hp_x - antler_bridge_px + (lead_conn_count * step);
+
 var vine_start = moon_row_x;
 var vine_end   = moon_row_x + (max_hp_cache * step);
 
@@ -52,11 +69,10 @@ var chal_alpha = 1.0;
 if (variable_global_exists("flask_stock") && global.flask_stock <= 0) chal_alpha = 0.6;
 
 // Align chalice left with first moon; drop under the HP row with row_gap_px.
-// (We compute positions in HP units, then draw with chalice scale.)
 var chal_x = round(hp_x);
 var chal_y = round(hp_y + moon_h + row_gap_px);
 
-// Drink anim follows timer (works as before)
+// Drink anim follows timer
 var drink_t = (variable_global_exists("_drinking_timer") ? global._drinking_timer : 0);
 
 if (drink_t > 0) {
@@ -83,3 +99,8 @@ for (var i = 1; i <= len; i++) {
         draw_sprite_ext(spr_digits, d, sx, chal_y, ui_scale_chalice, ui_scale_chalice, 0, c_white, chal_alpha);
     }
 }
+
+// -------------------- end of your draw --------------------
+
+// Restore matrix
+matrix_set(matrix_world, mw);
