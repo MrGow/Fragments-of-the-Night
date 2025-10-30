@@ -7,7 +7,7 @@
 //
 
 // ---------------- Core behaviour ----------------
-if (!variable_instance_exists(id, "facing"))    facing    = 1;   // 0=either, 1=grab facing right, -1=grab facing left
+if (!variable_instance_exists(id, "facing"))    facing    = -1;   // 0=either, 1=grab facing right, -1=grab facing left
 if (!variable_instance_exists(id, "autopull"))  autopull  = true;
 
 // Where the HANDS hang relative to the anchor (in pixels)
@@ -26,7 +26,7 @@ if (!variable_instance_exists(id, "pull_dy"))   pull_dy   = -12;
 // Corner index: 0=TopLeft, 1=TopRight, 2=BottomLeft, 3=BottomRight
 if (!variable_instance_exists(id, "use_cell_corners")) use_cell_corners = true;
 if (!variable_instance_exists(id, "cell_size"))        cell_size        = 32;
-if (!variable_instance_exists(id, "anchor_corner"))    anchor_corner    = 3;   // default BR
+if (!variable_instance_exists(id, "anchor_corner"))    anchor_corner    = 1;   // default BR
 
 // Fine nudges applied after corner snap (let you micro-align per instance)
 if (!variable_instance_exists(id, "marker_x_offset"))  marker_x_offset  = 0;
@@ -41,4 +41,3 @@ if (!variable_instance_exists(id, "anchor_bottom_half")) anchor_bottom_half = tr
 // Turn these on temporarily if you want to see gizmos from oLedge Draw.
 if (!variable_instance_exists(id, "debug_draw_hang"))  debug_draw_hang  = true;
 if (!variable_instance_exists(id, "debug_draw_stand")) debug_draw_stand = true;
-

@@ -42,3 +42,4 @@ if (!variable_instance_exists(id, "anchor_bottom_half")) anchor_bottom_half = tr
 if (!variable_instance_exists(id, "debug_draw_hang"))  debug_draw_hang  = true;
 if (!variable_instance_exists(id, "debug_draw_stand")) debug_draw_stand = true;
 
+

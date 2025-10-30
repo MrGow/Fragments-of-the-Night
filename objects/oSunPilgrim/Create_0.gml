@@ -5,7 +5,7 @@
 BASE_FACING = -1;
 
 // ---- STATS / DEATH VISUALS ----
-hp                = 4;
+hp                = 3;
 is_dead           = false;
 death_sprite      = spriteSunPilgrimDeath;
 death_image_speed = 0.75;
@@ -14,7 +14,7 @@ explosion_object  = oSunPilgrimExplosion; // set to noone if this type shouldn't
 // ---- MOVEMENT / AI ----
 hsp = 0; vsp = 0;
 run_speed   = 1.6;
-walk_speed  = 0.6;
+walk_speed  = 1.0;
 grav        = 0;    // raise & add collisions if you need gravity
 
 aggro_range  = 140;

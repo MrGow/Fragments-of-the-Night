@@ -337,27 +337,67 @@ function __pull_phase_step(_tx, _ty, _prefer_axis) {
 }
 
 function __begin_ledge_from_marker(_m) {
+    // --- Compute anchor from 32×32 cell corner (if requested), else fallback ---
+    // Per-marker controls on oLedge:
+    //   use_cell_corners : bool
+    //   cell_size        : int (grid size, default 32)
+    //   anchor_corner    : int (0=TL,1=TR,2=BL,3=BR)  [default 3]
+    //   marker_x_offset  : int (fine nudge)
+    //   marker_y_offset  : int (fine nudge)
+    // Fallback (if use_cell_corners is false/missing):
+    //   grid_h, anchor_bottom_half (previous scheme)
+
+    var useCorners = (variable_instance_exists(_m,"use_cell_corners") ? _m.use_cell_corners : false);
+    var ax, ay;
+
+    if (useCorners) {
+        var cell  = (variable_instance_exists(_m,"cell_size") ? _m.cell_size : 32);
+        var cx    = floor(_m.x / cell) * cell;
+        var cy    = floor(_m.y / cell) * cell;
+        var corner= (variable_instance_exists(_m,"anchor_corner") ? _m.anchor_corner : 3);
+        // 0=TL, 1=TR, 2=BL, 3=BR
+        switch (corner) {
+            case 0: ax = cx;         ay = cy;          break; // TL
+            case 1: ax = cx + cell;  ay = cy;          break; // TR
+            case 2: ax = cx;         ay = cy + cell;   break; // BL
+            default:ax = cx + cell;  ay = cy + cell;   break; // BR
+        }
+        // fine nudges
+        ax += (variable_instance_exists(_m,"marker_x_offset") ? _m.marker_x_offset : 0);
+        ay += (variable_instance_exists(_m,"marker_y_offset") ? _m.marker_y_offset : 0);
+    } else {
+        var grid_h = (variable_instance_exists(_m,"grid_h")) ? _m.grid_h : 32;
+        ax = _m.x + (variable_instance_exists(_m,"marker_x_offset") ? _m.marker_x_offset : 0);
+        ay = _m.y
+           + ((variable_instance_exists(_m,"anchor_bottom_half") && _m.anchor_bottom_half) ? grid_h * 0.5 : 0)
+           + (variable_instance_exists(_m,"marker_y_offset") ? _m.marker_y_offset : 0);
+    }
+
+    // --- Facing ---
     var fx = (_m.facing == 0) ? (sign(image_xscale)==0? 1 : sign(image_xscale)) : _m.facing;
 
-    var hang_x = _m.x + ((_m.facing == 0) ? _m.hang_dx : _m.hang_dx * fx);
-    var hang_y = _m.y + _m.hang_dy;
+    // --- Use anchor (ax,ay) as the lip reference ---
+    var hang_x = ax + ((_m.facing == 0) ? _m.hang_dx : _m.hang_dx * fx);
+    var hang_y = ay + _m.hang_dy;
 
-    // stand target: push deeper onto platform (+8px)
-    var tx = _m.x + ((_m.facing == 0) ? (_m.pull_dx + 8) : (_m.pull_dx + 8) * fx);
-    var ty = _m.y + _m.pull_dy;
+    var tx = ax + ((_m.facing == 0) ? _m.pull_dx : _m.pull_dx * fx);
+    var ty = ay + _m.pull_dy;
 
+    // --- Enter ledge state ---
     state = "ledge";
     ledge_dir = fx;
     hsp = 0;
     vsp = 0;
 
+    // slide safely to hang X
     var dx = hang_x - x;
     var sx = sign(dx);
-    var ax = abs(dx);
-    repeat (floor(ax)) { if (!__rect_hits_solid(sx, 0)) x += sx; }
-    var fxr = ax - floor(ax);
+    var ax_abs = abs(dx);
+    repeat (floor(ax_abs)) { if (!__rect_hits_solid(sx, 0)) x += sx; }
+    var fxr = ax_abs - floor(ax_abs);
     if (fxr > 0 && !__rect_hits_solid(sx*fxr, 0)) x += sx*fxr;
 
+    // climb up to hang Y without clipping
     var dy = hang_y - y;
     if (dy > 0) {
         var left = dy;
@@ -371,15 +411,16 @@ function __begin_ledge_from_marker(_m) {
     var sprGrab = __spr("spritePlayerLedgeGrab");
     if (sprGrab != -1) { __set_sprite_keep_feet(sprGrab, 0.65); image_index = 0; }
 
-    // --- phase targets: OUT (bigger), UP (higher), then final stand ---
+    // --- Phase targets: OUT, then UP to crest above anchor, then final stand ---
     ledge_phase = 0;
     phase0_tx   = x + (ledge_dir * 14);
     phase0_ty   = y;
     phase1_tx   = phase0_tx;
-    phase1_ty   = _m.y - 12;
+    phase1_ty   = ay - 12; // crest slightly above the lip height (uses computed anchor)
     phase2_tx   = tx;
     phase2_ty   = ty;
 
+    // timings & flags
     ledge_pull_time   = 0.30;
     ledge_grab_grace  = 7;
     ledge_regrab_cd   = 16;
@@ -679,4 +720,3 @@ if (state=="hurt" && hurt_lock_timer>0 && !_skip_overrides_this_frame) {
 
 // ---------- clear guard ----------
 if (attack_just_started) attack_just_started = false;
-
