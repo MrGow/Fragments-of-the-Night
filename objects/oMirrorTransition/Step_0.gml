@@ -37,21 +37,22 @@ function __finish_and_unlock() {
 switch (phase) {
     case Phase.Out:
     {
-        // ... inside case Phase.Out: at the top where you compute img_start/img_end ...
-if (leg_elapsed == 0 && end_hold == 0) {
-    if (sprite_index == -1) { show_debug_message("[oMirrorTransition] No sprite assigned."); __finish_and_unlock(); break; }
-    var frames = max(1, sprite_get_number(sprite_index));
+        if (leg_elapsed == 0 && end_hold == 0) {
+            if (sprite_index == -1) { show_debug_message("[oMirrorTransition] No sprite assigned."); __finish_and_unlock(); break; }
+            var frames = max(1, sprite_get_number(sprite_index));
 
-    // Force Out leg to be FORWARD (break), regardless of play_mode
-    img_start   = 0;
-    img_end     = frames - 1;
-
-    img_start   = clamp(img_start, 0, frames - 1);
-    img_end     = clamp(img_end,   0, frames - 1);
-    leg_frames  = max(1, ceil(room_speed * effect_time_out));
-    leg_elapsed = 0;
-}
-
+            if (play_mode == PlayMode.ForwardOnly || play_mode == PlayMode.ForwardThenReverse) {
+                img_start = 0;
+                img_end   = frames - 1;
+            } else {
+                img_start = frames - 1;
+                img_end   = 0;
+            }
+            img_start   = clamp(img_start, 0, frames - 1);
+            img_end     = clamp(img_end,   0, frames - 1);
+            leg_frames  = max(1, ceil(room_speed * effect_time_out));
+            leg_elapsed = 0;
+        }
 
         leg_elapsed++;
         var t  = clamp(leg_elapsed / max(1, leg_frames), 0, 1);
@@ -115,6 +116,23 @@ if (leg_elapsed == 0 && end_hold == 0) {
             leg_elapsed = 0;
             end_hold    = 0;
             phase       = Phase.In;
+
+            // ===== PLAYER: reverse "walk out of mirror" on arrival (50% faster) =====
+            var pl = instance_exists(oPlayer) ? instance_find(oPlayer, 0) : noone;
+            if (pl != noone) with (pl) {
+                if (!variable_instance_exists(id,"forced_anim_active"))  forced_anim_active  = false;
+                if (!variable_instance_exists(id,"forced_anim_sprite"))  forced_anim_sprite  = -1;
+                if (!variable_instance_exists(id,"forced_anim_speed"))   forced_anim_speed   = 0.45;
+                if (!variable_instance_exists(id,"forced_anim_reverse")) forced_anim_reverse = false;
+                if (!variable_instance_exists(id,"forced_anim_started")) forced_anim_started = false;
+
+                forced_anim_sprite  = __spr("spritePlayerLookInwards");
+                if (forced_anim_sprite == -1) forced_anim_sprite = spritePlayerLookInwards;
+                forced_anim_speed   = 0.45;  // faster
+                forced_anim_reverse = true;  // reverse on arrival
+                forced_anim_active  = true;
+                forced_anim_started = false;
+            }
         }
     }
     break;

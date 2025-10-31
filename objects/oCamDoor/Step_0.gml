@@ -12,8 +12,15 @@ if (!hovering && cooldown <= 0 && activate_in <= 0) armed = true;
 if (hovering && armed && mode == "mirror") {
     if (up_pressed()) interact_cnt++; else interact_cnt = 0;
     if (interact_cnt >= interact_need) {
-        do_mirror_transition(pl);
+        do_mirror_transition(pl); // now waits for pose to finish
     }
 } else {
     interact_cnt = 0;
+}
+
+// Fail-safe: if we're waiting for pose but player vanished, just go.
+if (waiting_for_pose) {
+    if (pl == noone || !instance_exists(pl)) {
+        start_transition_now();
+    }
 }

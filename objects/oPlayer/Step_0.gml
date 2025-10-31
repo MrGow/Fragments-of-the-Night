@@ -1,4 +1,4 @@
- /// oPlayer — Step  (movement, collisions, combat hooks, marker-ledges)
+/// oPlayer — Step  (movement, collisions, combat hooks, marker-ledges)
 
 // ---------- one-frame guard ----------
 if (!variable_instance_exists(id,"attack_just_started")) attack_just_started = false;
@@ -50,6 +50,16 @@ if (!variable_instance_exists(id,"ledge_walkoff_lock")) ledge_walkoff_lock = 0;
 if (!variable_instance_exists(id,"was_on_ground"))      was_on_ground      = false;
 if (ledge_walkoff_lock > 0) ledge_walkoff_lock--;
 
+// ---------- NEW: transition pose lock fields (hot-seeded) ----------
+if (!variable_instance_exists(id,"forced_anim_active"))   forced_anim_active   = false;
+if (!variable_instance_exists(id,"forced_anim_sprite"))   forced_anim_sprite   = -1;
+if (!variable_instance_exists(id,"forced_anim_speed"))    forced_anim_speed    = 0.45; // faster
+if (!variable_instance_exists(id,"forced_anim_started"))  forced_anim_started  = false;
+if (!variable_instance_exists(id,"forced_anim_reverse"))  forced_anim_reverse  = false;
+if (!variable_instance_exists(id,"forced_anim_prev"))     forced_anim_prev     = 0;    // wrap detection
+if (!variable_instance_exists(id,"forced_anim_notify"))   forced_anim_notify   = noone;// camdoor id
+if (!variable_instance_exists(id,"forced_anim_notified")) forced_anim_notified = false;// enter-mirror one-shot
+
 // ---------- sprite locals ----------
 var sprIdle_step      = __spr("spritePlayerIdle");
 var sprRun_step       = __spr("spritePlayerRun");
@@ -97,6 +107,69 @@ function __ensure_tm_solids() {
     return undefined;
 }
 __ensure_tm_solids();
+
+// ---------- NEW: hard transition-pose lock gate ----------
+if (forced_anim_active) {
+    // zero motion so we don’t drift
+    if (variable_instance_exists(id,"hsp")) hsp = 0;
+    if (variable_instance_exists(id,"vsp")) vsp = 0;
+
+    if (forced_anim_sprite != -1) {
+        if (sprite_index != forced_anim_sprite) {
+            sprite_index        = forced_anim_sprite;
+            forced_anim_started = false; // re-seed
+        }
+
+        var _last = max(0, image_number - 1);
+
+        // Seed playhead at start/end on first tick
+        if (!forced_anim_started) {
+            image_index         = forced_anim_reverse ? _last : 0;
+            forced_anim_prev    = image_index;
+            forced_anim_started = true;
+            forced_anim_notified= false; // reset notifier for forward case
+        }
+
+        // Drive playback (forward or reverse)
+        image_speed = forced_anim_speed * (forced_anim_reverse ? -1 : 1);
+
+        // ===== Finish conditions =====
+        if (!forced_anim_reverse) {
+            // FORWARD (entering mirror): when we hit last frame, HOLD pose and ping oCamDoor
+            if (image_index >= _last - 0.001) {
+                image_index = _last;
+                image_speed = 0;
+
+                if (!forced_anim_notified) {
+                    forced_anim_notified = true;
+                    if (instance_exists(forced_anim_notify)) {
+                        with (forced_anim_notify) {
+                            if (is_undefined(start_transition_now) == false) start_transition_now();
+                        }
+                    }
+                }
+                // IMPORTANT: DO NOT clear forced_anim_active here — keep final frame locked
+                // until the transition kicks in (prevents idle flicker).
+            }
+        } else {
+            // REVERSE (walking out of mirror): finish at 0 OR detect wrap
+            var reached_zero = (image_index <= 0.001);
+            var wrapped_back = (forced_anim_prev <= 0.25) && (image_index >= _last - 0.25);
+            if (reached_zero || wrapped_back) {
+                image_index = 0;
+                image_speed = 0;
+                forced_anim_active = false; // unlock after walk-out completes
+            }
+        }
+
+        forced_anim_prev = image_index;
+    } else {
+        image_speed = 0;
+        forced_anim_active = false;
+    }
+
+    exit; // skip the rest while locked
+}
 
 // ---------- collision helpers (FLOOR vs ANY-SOLID) ----------
 function __tile_floor_at(_x,_y) {

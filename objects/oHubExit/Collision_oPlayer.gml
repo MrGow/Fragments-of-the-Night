@@ -46,6 +46,22 @@ if (!is_undefined(global.return_spawn_id)) {
     }
 }
 
+// ===== PLAYER: lock forward "look into mirror" pose (50% faster) =====
+var pl = other; // oPlayer
+if (instance_exists(pl)) with (pl) {
+    if (!variable_instance_exists(id,"forced_anim_active"))  forced_anim_active  = false;
+    if (!variable_instance_exists(id,"forced_anim_sprite"))  forced_anim_sprite  = -1;
+    if (!variable_instance_exists(id,"forced_anim_speed"))   forced_anim_speed   = 0.45; // faster
+    if (!variable_instance_exists(id,"forced_anim_reverse")) forced_anim_reverse = false;
+    if (!variable_instance_exists(id,"forced_anim_started")) forced_anim_started = false;
+
+    forced_anim_sprite  = __spr("spritePlayerLookInwards");
+    if (forced_anim_sprite == -1) forced_anim_sprite = spritePlayerLookInwards;
+    forced_anim_speed   = 0.45;
+    forced_anim_reverse = false;    // forward as we leave SaveRoom
+    forced_anim_active  = true;
+    forced_anim_started = false;
+}
+
 // --- Run the unified transition ---
 script_transition_goto(_dest, global.spawn_tag_next);
-

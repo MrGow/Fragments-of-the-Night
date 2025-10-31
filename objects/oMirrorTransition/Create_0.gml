@@ -61,3 +61,7 @@ surf_cache  = -1;
 
 // NEW: flag the script sets to start the transition
 start_requested = false;
+
+// NEW: one-shot guards so we don't re-post pose requests every frame
+pose_queued_forward = false;
+pose_queued_reverse = false;
