@@ -1,4 +1,4 @@
-/// oMirrorTransition — Draw GUI (FULL EVENT)
+/// oMirrorTransition — Draw GUI (robust: works with/without oPostFX)
 
 // -----------------------------------------------------------------------------
 // Setup
@@ -6,10 +6,14 @@
 var gw = display_get_gui_width();
 var gh = display_get_gui_height();
 
-// Prefer the processed frame from oPostFX; fall back to application_surface.
-var surf = (global.postfx_ready && surface_exists(global.postfx_surface))
-    ? global.postfx_surface
-    : application_surface;
+// Prefer processed frame from oPostFX if globals exist; else app surface.
+var use_postfx =
+    variable_global_exists("postfx_ready")     &&
+    variable_global_exists("postfx_surface")   &&
+    global.postfx_ready                        &&
+    surface_exists(global.postfx_surface);
+
+var surf = use_postfx ? global.postfx_surface : application_surface;
 
 // Local helpers
 function __smoothstep(a, b, x) {
@@ -41,7 +45,7 @@ var p = (phase == Phase.Out)
     : clamp((img_start - image_index) / denom_p, 0, 1);
 
 // -----------------------------------------------------------------------------
-// Refraction overlay of the *current frame* (processed by oPostFX if available)
+// Refraction overlay of the *current frame* (processed if available)
 // -----------------------------------------------------------------------------
 if (surface_exists(surf)) {
     var peak   = (phase == Phase.Out) ? __smoothstep(0.20, 0.92, p) : __smoothstep(0.12, 0.85, p);
@@ -58,7 +62,7 @@ if (surface_exists(surf)) {
         if (u_c != -1) shader_set_uniform_f(u_c, 0.5, 0.5);
         if (u_a != -1) shader_set_uniform_f(u_a, amount);
 
-        // If you like the 1px inset “frame” look, keep 1/1/gw-2/gh-2; else use full.
+        // 1px inset “frame” look (optional)
         draw_surface_stretched(surf, 1, 1, gw - 2, gh - 2);
 
         shader_reset();

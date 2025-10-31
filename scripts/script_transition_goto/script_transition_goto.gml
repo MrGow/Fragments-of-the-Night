@@ -1,40 +1,50 @@
-/// script_transition_goto(_target_room, _spawn_tag)
-/// @param _target_room
-/// @param _spawn_tag
+/// script_transition_goto(room_or_name, spawn_tag)
+// Modern function version (no deprecated argument[]; safe across GM updates)
 
-var _target_room = argument0;
-var _spawn_tag   = argument1;
+function script_transition_goto(_room, _spawn_tag) {
+    // Resolve room if a string name is passed
+    if (is_string(_room)) {
+        var rid = asset_get_index(_room);
+        if (rid != -1) _room = rid;
+    }
 
-// If a transition is running, ignore
-if (variable_global_exists("_transition_busy") && global._transition_busy) exit;
+    if (is_undefined(_spawn_tag)) _spawn_tag = "default";
 
-// Direction: TO SaveRoom = forward shatter; FROM SaveRoom = reverse rebuild
-var _to_save = (_target_room == SaveRoom);
+    // If a transition is already running, ignore the request
+    if (variable_global_exists("_transition_busy") && global._transition_busy) return;
 
-// Get (or create) the singleton
-var tr = noone;
-if (instance_exists(oMirrorTransition)) {
-    tr = instance_find(oMirrorTransition, 0);
-} else {
-    var _layer_name = "";
-    if (layer_exists("FX"))          _layer_name = "FX";
-    else if (layer_exists("actors")) _layer_name = "actors";
+    // Direction hint for the mirror transition (optional)
+    var _to_save = (_room == SaveRoom);
 
-    tr = (_layer_name != "")
-        ? instance_create_layer(0, 0, _layer_name, oMirrorTransition)
-        : instance_create_depth(0, 0, -16000, oMirrorTransition);
-}
+    // Get (or create) the transition singleton
+    var tr = noone;
+    if (instance_exists(oMirrorTransition)) {
+        tr = instance_find(oMirrorTransition, 0);
+    } else {
+        var _layer_name = "";
+        if (layer_exists("FX"))          _layer_name = "FX";
+        else if (layer_exists("actors")) _layer_name = "actors";
 
-// Bail if creation failed
-if (tr == noone) {
-    show_debug_message("[transition_goto] FAILED to create oMirrorTransition");
-    exit;
-}
+        tr = (_layer_name != "")
+           ? instance_create_layer(0, 0, _layer_name, oMirrorTransition)
+           : instance_create_depth(0, 0, -16000, oMirrorTransition);
+    }
 
-// Configure only — no function calls, no sprite reads
-with (tr) {
-    target_room   = _target_room;
-    target_spawn  = _spawn_tag;
-    play_mode     = _to_save ? PlayMode.ForwardOnly : PlayMode.ReverseOnly;
-    start_requested = true; // the instance will kick off in its own Step
+    if (tr == noone) {
+        show_debug_message("[transition_goto] FAILED to create oMirrorTransition");
+        return;
+    }
+
+    // Optional: give the camera a brief guard to prevent flicker on handover
+    if (object_exists(oCamera) && instance_exists(oCamera)) {
+        with (oCamera) transition_guard = max(transition_guard, 8);
+    }
+
+    // Set up transition data (the transition object will drive the effect)
+    with (tr) {
+        target_room     = _room;
+        target_spawn    = _spawn_tag;
+        play_mode       = _to_save ? PlayMode.ForwardOnly : PlayMode.ReverseOnly;
+        start_requested = true;
+    }
 }

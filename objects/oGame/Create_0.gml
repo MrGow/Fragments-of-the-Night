@@ -17,13 +17,16 @@ if (cam_ok) {
 window_set_size(base_w * scale, base_h * scale);
 
 // Crisp pixels (nearest-neighbor) & ensure app surface exists
-gpu_set_texfilter(false);
-application_surface_enable(true);
 
 // (Optional) If something resized the app surface earlier, force it to base.
 if (surface_exists(application_surface)) {
     surface_resize(application_surface, base_w, base_h);
 }
+
+application_surface_enable(true);
+application_surface_draw_enable(false); // we draw it manually in Draw End
+gpu_set_texfilter(false);
+
 
 // Lock GUI to the same logical size so HUD stays sharp
 // Let GUI match the window; HUD normalizes itself in Draw GUI

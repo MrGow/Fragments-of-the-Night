@@ -6,7 +6,7 @@ application_surface_draw_enable(true);
 persistent = true;
 
 // Quality: 0=Off, 1=Low, 2=High
-global.vfx_quality = 2;
+global.vfx_quality = 1;
 
 // Toggles (start obvious so you can see it)
 fx_use_lut        = false; // enable later after adding sLUT

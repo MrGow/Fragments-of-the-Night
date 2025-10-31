@@ -37,22 +37,21 @@ function __finish_and_unlock() {
 switch (phase) {
     case Phase.Out:
     {
-        if (leg_elapsed == 0 && end_hold == 0) {
-            if (sprite_index == -1) { show_debug_message("[oMirrorTransition] No sprite assigned."); __finish_and_unlock(); break; }
-            var frames = max(1, sprite_get_number(sprite_index));
+        // ... inside case Phase.Out: at the top where you compute img_start/img_end ...
+if (leg_elapsed == 0 && end_hold == 0) {
+    if (sprite_index == -1) { show_debug_message("[oMirrorTransition] No sprite assigned."); __finish_and_unlock(); break; }
+    var frames = max(1, sprite_get_number(sprite_index));
 
-            if (play_mode == PlayMode.ForwardOnly || play_mode == PlayMode.ForwardThenReverse) {
-                img_start = 0;
-                img_end   = frames - 1;
-            } else {
-                img_start = frames - 1;
-                img_end   = 0;
-            }
-            img_start   = clamp(img_start, 0, frames - 1);
-            img_end     = clamp(img_end,   0, frames - 1);
-            leg_frames  = max(1, ceil(room_speed * effect_time_out));
-            leg_elapsed = 0;
-        }
+    // Force Out leg to be FORWARD (break), regardless of play_mode
+    img_start   = 0;
+    img_end     = frames - 1;
+
+    img_start   = clamp(img_start, 0, frames - 1);
+    img_end     = clamp(img_end,   0, frames - 1);
+    leg_frames  = max(1, ceil(room_speed * effect_time_out));
+    leg_elapsed = 0;
+}
+
 
         leg_elapsed++;
         var t  = clamp(leg_elapsed / max(1, leg_frames), 0, 1);
